@@ -1,9 +1,15 @@
 [package]
 edition = "2021"
 name = "ylab-edge-go"
-version = "0.3.0"
+version = "0.4.0"
 license = "MIT OR Apache-2.0"
 resolver = "2"
+
+[features]
+default = []
+#mpu6886 = ["dep:mpu6886"]
+#tlv493d = ["dep:tlv493d"]
+
 
 [lib]
 name = "ylab"
@@ -58,7 +64,7 @@ static_cell = "1.3.0"
 fixed = "1.29"
 fixed-macro = "1.2.0"
 smart-leds = "0.4.0"
-embedded-hal = {version = "1.0.0"}
+embedded-hal = { version = "1.0.0" }
 lsm6ds33 = "0.5.0"
 ads1x1x = "0.3.0"
 #embedded-ads111x = "0.1.1"
@@ -75,16 +81,12 @@ max3010x = { version = "0.2.0", default-features = false }
 lsm6dsox = "1.0.1"
 xca9548a = "0.2.1"
 #sensor-tlv493d = {version = "0.1.0", default-features = false}
-tlv493d = { path = "../tlv493d" }
 embedded-hal-async = { version = "1.0.0" }
 shared-bus = { version = "0.3.1", features = ["cortex-m"] }
 log = "0.4.28"
 
-#mpu6886 = "0.1.0"
-#embedded-io = "0.6.1"
-#embedded-hal-async = "1.0.0"
-#embedded-hal-compat = "0.12.0"
-mpu6886 = { path = "../mpu6886" }
+#tlv493d = { path = "../tlv493d", optional = true }
+#mpu6886 = { path = "../mpu6886", optional = true }
 
 ## network drivers for cyw43 (pico W) or wiznet w5500
 # embassy-net = { version = "0.1.0", features = ["defmt", "nightly", "tcp", "dhcpv4", "medium-ethernet"] }

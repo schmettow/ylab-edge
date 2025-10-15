@@ -627,6 +627,7 @@ pub mod yxz_bmi160 {
 
 /// ## TLV Hall effect
 
+/*#[cfg(feature = "tlv493d")]
 pub mod yxz_tlv {
     use super::*;
     use hal::peripherals::I2C0 as I2C;
@@ -723,7 +724,7 @@ pub mod yirt_max {
             };
         }
     }
-}
+}*/
 
 pub mod yirt {
     // MLX90614
