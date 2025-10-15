@@ -462,16 +462,6 @@ pub mod yxz_lsm6 {
                         };
                         SINK.send(sample.into()).await;
                     }
-
-                    /*log::info!("{},{},{:.2},{:.2},{:.2},{:.2},{:.2},{:.2},,",
-                    result.time.as_micros(),
-                    s,
-                    result.read[0],
-                    result.read[1],
-                    result.read[2],
-                    result.read[3],
-                    result.read[4],
-                    result.read[5],);*/
                 }
             };
             if !just_spin {
@@ -479,87 +469,7 @@ pub mod yxz_lsm6 {
             };
         }
     }
-
-    //use hal::bind_interrupts;
-    type SharedI2C = Mutex<RawMutex, Option<I2C>>;
-
-    /*    #[embassy_executor::task]
-    pub async fn sharing_task(
-        i2c: &'static SharedI2C,
-        scl: &'static Mutex<RawMutex, Option<impl i2c::SclPin<I2C>>>,
-        sda: &'static Mutex<RawMutex, Option<impl i2c::SdaPin<I2C>>>,
-        hz: u64,
-    ) -> () {
-        let mut ticker = Ticker::every(Duration::from_hz(hz));
-        //DISP.signal([None, None, None, Some("LSM shared ticks".try_into().unwrap())]);
-        //let mut reading: Reading;
-        //let mut result: SensorResult<Reading>;
-        READY.store(true, ORD);
-        loop {
-            ticker.next().await;
-            if RECORD.load(ORD) {
-                match read(i2c, scl, sda).await {
-                    Ok(Some(_reading)) => todo!(),
-                    _ => {}
-                }
-            };
-        }
-    }*/
-
-    /// One-shot read
-    ///
-    /// does a full round of initialization and one
-    /// DEACTIVATED, because interrupt binding collides.
-
-    pub async fn read(
-        _i2c: &'static SharedI2C,
-
-        _scl: &'static Mutex<RawMutex, Option<impl i2c::SclPin<I2C>>>,
-        _sda: &'static Mutex<RawMutex, Option<impl i2c::SdaPin<I2C>>>,
-    ) -> Result<Option<Reading>, Error> {
-        {
-            todo!();
-            // inner scope
-            /* bind_interrupts!(struct Irqs {
-                I2C0_IRQ => i2c::InterruptHandler<I2C>;
-            });
-            let mut i2c_unlocked = i2c.lock().await;
-            let mut scl = scl.lock().await;
-            let mut sda = sda.lock().await;
-            //DISP.signal([None, Some("Got lock".try_into().unwrap()), None,None]);
-            if let Some(i2c) = i2c_unlocked.as_mut() {
-                let i2c
-                    = i2c::I2c::new_async(i2c,  scl.as_mut().unwrap(), sda.as_mut().unwrap(), Irqs, i2c::Config::default());
-                //DISP.signal([None, Some("Got I2C".try_into().unwrap()), None,None]);
-                let mut sensor
-                    = Lsm6::new(i2c, SlaveAddress::Low, time::Delay);
-                //DISP.signal([None, Some("Got LSM".try_into().unwrap()), None,None]);
-                sensor.setup().unwrap();
-                sensor.set_accel_sample_rate(DataRate::Freq416Hz).unwrap();
-                sensor.set_gyro_sample_rate(DataRate::Freq416Hz).unwrap();
-                //sensor.set_accel_scale(AccelerometerScale::Accel2g).unwrap();
-                //sensor.set_gyro_scale(GyroscopeScale::Dps250).unwrap();
-                //DISP.signal([None, Some("All set".try_into().unwrap()), None,None]);
-                let accel = sensor.accel_norm();
-                let gyro = sensor.angular_rate();
-                match (accel, gyro) {
-                    (Ok(accel), Ok(gyro))
-                    => {//DISP.signal([None, Some("Got Read".try_into().unwrap()), None,None]);
-                        let reading = [ accel.x, accel.y, accel.z,
-                                    gyro.x.as_rpm() as f32,
-                                    gyro.y.as_rpm() as f32,
-                                    gyro.z.as_rpm() as f32];
-                        DISP.signal([None, Some("Got Sense".try_into().unwrap()), None,None]);
-                        return Ok(Some(reading))
-                        },
-                    (Err(_), Err(_)) => return Ok(None),
-                    (_,_) => Ok(None),
-                    }
-            } else {return Err(lsm6dsox::Error::ResetFailed)}*/
-        } // inner scope
-    }
 }
-
 /// ## BMI Acceleration Sensor
 
 pub mod yxz_bmi160 {
