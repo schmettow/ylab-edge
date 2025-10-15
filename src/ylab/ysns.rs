@@ -642,9 +642,6 @@ pub mod yxz_tlv {
     pub type Measure = i16;
     pub type Reading = [Measure; N];
     pub type Sample = crate::Sample<Measure, N>;
-    pub type I2cBus<I> = embassy_sync::mutex::Mutex<NoopRawMutex, i2c::I2c<'static, I, i2c::Async>>;
-    use embassy_sync::blocking_mutex::raw::NoopRawMutex;
-    use hal::peripherals::I2C0;
 
     #[embassy_executor::task]
     pub async fn task_0(i2c_bus: &'static I2cBus<I2C0>, hz: u64, sensory: u8) {

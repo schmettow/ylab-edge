@@ -70,3 +70,12 @@ impl core::fmt::Display for Ytf {
         write!(f, "")
     }
 }
+
+pub use hal::peripherals::I2C0;
+pub use hal::peripherals::I2C1;
+pub type I2cBus<I> =
+    embassy_sync::mutex::Mutex<NoopRawMutex, hal::i2c::I2c<'static, I, hal::i2c::Async>>;
+pub type I2cBus0 = I2cBus<I2C0>;
+pub type I2cBus1 = I2cBus<I2C1>;
+pub use embassy_sync::blocking_mutex::raw::NoopRawMutex;
+use static_cell::StaticCell;
