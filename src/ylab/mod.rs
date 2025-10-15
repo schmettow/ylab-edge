@@ -73,9 +73,15 @@ impl core::fmt::Display for Ytf {
 
 pub use hal::peripherals::I2C0;
 pub use hal::peripherals::I2C1;
-pub type I2cBus<I> =
+pub type AsyncI2cBus<I> =
     embassy_sync::mutex::Mutex<NoopRawMutex, hal::i2c::I2c<'static, I, hal::i2c::Async>>;
-pub type I2cBus0 = I2cBus<I2C0>;
-pub type I2cBus1 = I2cBus<I2C1>;
+pub type BlockI2cBus<I> = embassy_sync::mutex::Mutex<
+    NoopRawMutex,
+    core::cell::RefCell<hal::i2c::I2c<'static, I, hal::i2c::Blocking>>,
+>;
+pub type AsyncI2cDevice<'a, M, BUS> =
+    embassy_embedded_hal::shared_bus::asynch::i2c::I2cDevice<'a, M, BUS>;
+pub type BlockI2cDevice<'a, M, BUS> =
+    embassy_embedded_hal::shared_bus::blocking::i2c::I2cDevice<'a, M, BUS>;
 pub use embassy_sync::blocking_mutex::raw::NoopRawMutex;
-use static_cell::StaticCell;
+pub use static_cell::StaticCell;

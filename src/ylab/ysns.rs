@@ -644,11 +644,11 @@ pub mod yxz_tlv {
     pub type Sample = crate::Sample<Measure, N>;
 
     #[embassy_executor::task]
-    pub async fn task_0(i2c_bus: &'static I2cBus<I2C0>, hz: u64, sensory: u8) {
+    pub async fn task_0(i2c_bus: &'static AsyncI2cBus<I2C0>, hz: u64, sensory: u8) {
         inner_task(i2c_bus, hz, sensory).await;
     }
 
-    async fn inner_task<I>(i2c_bus: &'static I2cBus<I>, hz: u64, sensory: u8)
+    async fn inner_task<I>(i2c_bus: &'static AsyncI2cBus<I>, hz: u64, sensory: u8)
     where
         I: embassy_rp::i2c::Instance,
     {
