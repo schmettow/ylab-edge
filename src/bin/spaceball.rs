@@ -4,33 +4,39 @@
 /// CONFIGURATION
 ///
 /// Adc Tcm
-static DEV: (bool, bool, bool) = (true, true, true);
-static HZ: (u64, u64, u64) = (0, 211, 0);
+static DEV: (bool, bool, bool, bool) = (true, true, true, false); // Moi, Adc, Motion
+static HZ: (u64, u64, u64, u64) = (0, 53, 149, 0);
 static SPEED: u32 = 100_000;
-static RUN_DISP: bool = false;
+const LOG_LEVEL: log::LevelFilter = log::LevelFilter::Info;
 use {defmt_rtt as _, panic_probe as _};
+
+use defmt::*;
+use embassy_executor::Executor;
+use hal::adc::Async;
+#[allow(unused_imports)]
+use hal::gpio::Pin;
+use hal::multicore::{spawn_core1, Stack};
 
 /// The following code initializes the second stack, plus
 /// two heaps
 static mut CORE1_STACK: Stack<4096> = Stack::new();
+//use log::LevelFilter;
 use static_cell::StaticCell;
 static EXECUTOR0: StaticCell<Executor> = StaticCell::new();
 static EXECUTOR1: StaticCell<Executor> = StaticCell::new();
 
-use ydsp::TEXT as DISP;
+use ylab::ysns::adc as yadc;
+use ylab::ysns::moi;
+use ylab::ysns::yxz_tlv as tlv;
+use ylab::ytfk::bsu as ybsu;
+use ylab::yuii::btn as ybtn;
+use ylab::yuio::led as yled;
 /// +  multi-threading with async
 // use embassy_executor::Spawner;
 /// + timing using Embassy time
 // use embassy_time::{Duration, Ticker};
 /// + peripherals
 use ylab::*;
-use ysns::adc as yadc;
-use ysns::moi;
-use ysns::yco2;
-use ytfk::bsu as ybsu;
-use yuii::btn as ybtn;
-use yuio::disp as ydsp;
-use yuio::led as yled;
 
 #[derive(
     Debug, // used as fmt
@@ -47,7 +53,6 @@ enum AppState {
 
 use hal::adc;
 use hal::bind_interrupts;
-use hal::gpio::Pin;
 use hal::i2c::{self, Config};
 use hal::peripherals::{I2C0, I2C1};
 use ylab::hal;
@@ -57,76 +62,65 @@ bind_interrupts!(struct Irqs {
     ADC_IRQ_FIFO => adc::InterruptHandler;
 });
 
-use defmt::*;
-use embassy_executor::Executor;
-#[allow(unused_imports)]
-use hal::adc::{Async, Blocking};
-use hal::multicore::{spawn_core1, Stack};
-
 #[cortex_m_rt::entry]
 fn init() -> ! {
+    // Second core with I2C sensories
     let p = hal::init(Default::default());
+    #[allow(static_mut_refs)]
     spawn_core1(p.CORE1, unsafe { &mut CORE1_STACK }, move || {
         let executor1 = EXECUTOR1.init(Executor::new());
-
         executor1.run(|spawner| {
-            let i2c_contr = p.I2C0;
+            let i2c0 = p.I2C0;
             if DEV.2 {
+                // Magnet sensors on Grove 1
                 let mut config = Config::default();
                 config.frequency = SPEED.into();
-                let i2c = i2c::I2c::new_async(i2c_contr, p.PIN_9, p.PIN_8, Irqs, config);
-                unwrap!(spawner.spawn(ylab::ysns::yco2::task(i2c, 2)));
+                let i2c = i2c::I2c::new_async(i2c0, p.PIN_1, p.PIN_0, Irqs, config);
+                spawner.spawn(tlv::task(i2c, HZ.2, 2)).unwrap()
             }
         })
     });
 
+    // First core with all IO and built-in sensors
     let executor0 = EXECUTOR0.init(Executor::new());
     executor0.run(|spawner| {
+        if DEV.0 {
+            spawner
+                .spawn(moi::task(
+                    p.PIN_21.into(),
+                    p.PIN_22.into(),
+                    p.PIN_8.into(),
+                    p.PIN_9.into(),
+                    0,
+                ))
+                .unwrap()
+        }
+        // Grove
+        if DEV.1 {
+            let adc0: adc::Adc<'_, Async> = adc::Adc::new(p.ADC, Irqs, adc::Config::default());
+            spawner
+                .spawn(yadc::task(adc0, p.PIN_26, p.PIN_27, p.PIN_28, HZ.1, 1))
+                .unwrap();
+        };
+
         // task for controlling the led
         unwrap!(spawner.spawn(yled::task(p.PIN_25.into())));
-        // task for receiving text and put it on an OLED 1306
-        // Display will use I2C1 on
-        if RUN_DISP {
-            let i2c_contr = p.I2C1;
-            let i2c = i2c::I2c::new_async(i2c_contr, p.PIN_3, p.PIN_2, Irqs, Config::default());
-            unwrap!(spawner.spawn(ydsp::task(i2c)));
-        }
         // task for listening to button presses.
         unwrap!(spawner.spawn(ybtn::task(p.PIN_20.into())));
         // task listening for data packeges to send up the line (reverse USB ;)
-        unwrap!(spawner.spawn(ybsu::logger_task(p.USB, log::LevelFilter::Info)));
+        unwrap!(spawner.spawn(ybsu::logger_task(p.USB, LOG_LEVEL)));
         unwrap!(spawner.spawn(ybsu::task()));
         // task to control sensors, storage and ui
         unwrap!(spawner.spawn(control_task()));
-        if DEV.0 {
-            if DEV.0 {
-                spawner
-                    .spawn(ylab::ysns::moi::task_2(p.PIN_21, p.PIN_22, 0))
-                    .unwrap()
-            }
-            if DEV.1 {
-                let adc0: adc::Adc<'_, Async> = adc::Adc::new(p.ADC, Irqs, adc::Config::default());
-                spawner
-                    .spawn(yadc::task(
-                        adc0,
-                        p.PIN_26.into(),
-                        p.PIN_27.into(),
-                        p.PIN_28.into(),
-                        HZ.1,
-                        1,
-                    ))
-                    .unwrap();
-            };
-        };
     });
 }
 
 #[embassy_executor::task]
 async fn control_task() {
-    let mut state = AppState::Record;
+    let mut state = AppState::Ready; // <<--------
     moi::RECORD.store(true, ORD);
     yadc::RECORD.store(true, ORD);
-    yco2::RECORD.store(true, ORD);
+    tlv::RECORD.store(true, ORD);
 
     yled::LED.signal(yled::State::Steady);
     loop {
@@ -148,24 +142,21 @@ async fn control_task() {
                     yled::LED.signal(yled::State::Vibrate);
                     moi::RECORD.store(false, ORD);
                     yadc::RECORD.store(false, ORD);
-                    yco2::RECORD.store(false, ORD);
-                    DISP.signal([Some("New".try_into().unwrap()), None, None, None]);
+                    tlv::RECORD.store(false, ORD);
                 }
                 AppState::Ready => {
                     // Pause all sensors and blink
                     yled::LED.signal(yled::State::Blink);
-                    moi::RECORD.store(false, ORD);
                     yadc::RECORD.store(false, ORD);
-                    yco2::RECORD.store(false, ORD);
-                    DISP.signal([Some("Ready".try_into().unwrap()), None, None, None]);
+                    moi::RECORD.store(false, ORD);
+                    tlv::RECORD.store(false, ORD);
                 }
                 AppState::Record => {
                     // Transmit sensor data and light up
-                    moi::RECORD.store(true, ORD);
                     yled::LED.signal(yled::State::Steady);
                     yadc::RECORD.store(true, ORD);
-                    yco2::RECORD.store(true, ORD);
-                    DISP.signal([Some("Record".try_into().unwrap()), None, None, None]);
+                    moi::RECORD.store(true, ORD);
+                    tlv::RECORD.store(true, ORD);
                 }
             }
             state = next_state;

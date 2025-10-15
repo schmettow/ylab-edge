@@ -101,7 +101,13 @@ fn init() -> ! {
     executor0.run(|spawner| {
         if DEV.0 {
             spawner
-                .spawn(moi::task(p.PIN_21, p.PIN_22, p.PIN_8, p.PIN_9, 0))
+                .spawn(moi::task(
+                    p.PIN_21.into(),
+                    p.PIN_22.into(),
+                    p.PIN_8.into(),
+                    p.PIN_9.into(),
+                    0,
+                ))
                 .unwrap()
         }
         // Grove
@@ -113,9 +119,9 @@ fn init() -> ! {
         };
 
         // task for controlling the led
-        unwrap!(spawner.spawn(yled::task(p.PIN_25.degrade())));
+        unwrap!(spawner.spawn(yled::task(p.PIN_25.into())));
         // task for listening to button presses.
-        unwrap!(spawner.spawn(ybtn::task(p.PIN_20.degrade())));
+        unwrap!(spawner.spawn(ybtn::task(p.PIN_20.into())));
         // task listening for data packeges to send up the line (reverse USB ;)
         unwrap!(spawner.spawn(ybsu::logger_task(p.USB, LOG_LEVEL)));
         unwrap!(spawner.spawn(ybsu::task()));

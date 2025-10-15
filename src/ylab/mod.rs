@@ -6,6 +6,8 @@ pub use embassy_sync::channel::Channel;
 pub use embassy_sync::mutex::Mutex;
 pub use embassy_sync::signal::Signal;
 pub use embassy_time as time;
+use hal::gpio::AnyPin;
+use hal::Peri;
 pub use heapless::{String, Vec};
 pub use time::{Delay, Duration, Instant, Ticker};
 
