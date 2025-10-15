@@ -9,7 +9,6 @@ pub struct SensorResult<R> {
     pub reading: R,
 }
 
-
 pub mod moi {
     use super::*;
     use hal::gpio::{Input, Pull};
@@ -24,7 +23,13 @@ pub mod moi {
     pub static RECORD: AtomicBool = AtomicBool::new(true);
 
     #[embassy_executor::task]
-    pub async fn task(moi_0: PIN_21, moi_1: PIN_22, moi_2: PIN_8, moi_3: PIN_9, sensory: u8) {
+    pub async fn task(
+        moi_0: Peri<'static, AnyPin>,
+        moi_1: Peri<'static, AnyPin>,
+        moi_2: Peri<'static, AnyPin>,
+        moi_3: Peri<'static, AnyPin>,
+        sensory: u8,
+    ) {
         //pub async fn task(pins: [AnyPin; 4], trigger: [(bool, Option<bool>); 4], hz: u64, sensory: u8) {
         let mut moi_0 = Input::new(moi_0, Pull::Up);
         let mut moi_1 = Input::new(moi_1, Pull::Up);
@@ -59,7 +64,7 @@ pub mod moi {
     }
 
     #[embassy_executor::task]
-    pub async fn task_2(moi_0: PIN_21, moi_1: PIN_22, sensory: u8) {
+    pub async fn task_2(moi_0: Peri<'static, PIN_21>, moi_1: Peri<'static, PIN_22>, sensory: u8) {
         //pub async fn task(pins: [AnyPin; 4], trigger: [(bool, Option<bool>); 4], hz: u64, sensory: u8) {
         let mut sample: Sample<2>;
         let mut moi_0 = Input::new(moi_0, Pull::Up);
@@ -107,9 +112,9 @@ pub mod adc {
     #[embassy_executor::task]
     pub async fn task(
         mut adc: Adc<'static, Async>,
-        adc_0: PIN_26,
-        adc_1: PIN_27,
-        adc_2: PIN_28,
+        adc_0: Peri<'static, PIN_26>,
+        adc_1: Peri<'static, PIN_27>,
+        adc_2: Peri<'static, PIN_28>,
         hz: u64,
         sensory: u8,
     ) {
@@ -620,7 +625,7 @@ pub mod yxz_bmi160 {
     }
 }
 
-/// ## BMI Acceleration Sensor
+/// ## TLV Hall effect
 
 pub mod yxz_tlv {
     use super::*;
