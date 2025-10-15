@@ -627,10 +627,10 @@ pub mod yxz_bmi160 {
 
 /// ## TLV Hall effect
 
-/*#[cfg(feature = "tlv493d")]
 pub mod yxz_tlv {
     use super::*;
-    use hal::peripherals::I2C0 as I2C;
+    //use hal::peripherals::I2C0 as I2C;
+    use embassy_embedded_hal::shared_bus::asynch::i2c::I2cDevice;
     #[allow(unused)]
     use tlv493d as tlv;
 
@@ -642,9 +642,20 @@ pub mod yxz_tlv {
     pub type Measure = i16;
     pub type Reading = [Measure; N];
     pub type Sample = crate::Sample<Measure, N>;
+    pub type I2cBus<I> = embassy_sync::mutex::Mutex<NoopRawMutex, i2c::I2c<'static, I, i2c::Async>>;
+    use embassy_sync::blocking_mutex::raw::NoopRawMutex;
+    use hal::peripherals::I2C0;
 
     #[embassy_executor::task]
-    pub async fn task(i2c: i2c::I2c<'static, I2C, Mode>, hz: u64, sensory: u8) {
+    pub async fn task_0(i2c_bus: &'static I2cBus<I2C0>, hz: u64, sensory: u8) {
+        inner_task(i2c_bus, hz, sensory).await;
+    }
+
+    async fn inner_task<I>(i2c_bus: &'static I2cBus<I>, hz: u64, sensory: u8)
+    where
+        I: embassy_rp::i2c::Instance,
+    {
+        let i2c = I2cDevice::new(&i2c_bus);
         //DISP.signal([None, None, None, Some("LVT task".try_into().unwrap())]);
         let address = 0x5E;
         let mut sensor = tlv::Tlv493d::new_async(i2c, address, tlv::Mode::Master)
@@ -724,7 +735,7 @@ pub mod yirt_max {
             };
         }
     }
-}*/
+}
 
 pub mod yirt {
     // MLX90614

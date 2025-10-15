@@ -70,13 +70,18 @@ fn init() -> ! {
     spawn_core1(p.CORE1, unsafe { &mut CORE1_STACK }, move || {
         let executor1 = EXECUTOR1.init(Executor::new());
         executor1.run(|spawner| {
-            let i2c0 = p.I2C0;
             if DEV.2 {
                 // Magnet sensors on Grove 1
                 let mut config = Config::default();
                 config.frequency = SPEED.into();
-                let i2c = i2c::I2c::new_async(i2c0, p.PIN_1, p.PIN_0, Irqs, config);
-                spawner.spawn(tlv::task(i2c, HZ.2, 2)).unwrap()
+
+                let i2c0 = i2c::I2c::new_async(p.I2C0, p.PIN_1, p.PIN_0, Irqs, config);
+                use embassy_sync::mutex::Mutex;
+                use static_cell::StaticCell;
+                static I2C_BUS_0: StaticCell<tlv::I2cBus<I2C0>> = StaticCell::new();
+                let i2c_bus_0 = I2C_BUS_0.init(Mutex::new(i2c0));
+
+                spawner.spawn(tlv::task_0(i2c_bus_0, HZ.2, 2)).unwrap()
             }
         })
     });
