@@ -78,8 +78,8 @@ bmi160 = "1.1.0"
 mlx9061x = "0.3.0"
 scd4x = { version = "0.4.1", default-features = false, features = ["scd41"] }
 max3010x = { version = "0.2.0", default-features = false }
-lsm6dsox = "1.0.1"
-xca9548a = "0.2.1"
+lsm6dsox = { path = "../lsm6dsox" }
+xca9548a = "1.0.0"
 #sensor-tlv493d = {version = "0.1.0", default-features = false}
 embedded-hal-async = { version = "1.0.0" }
 shared-bus = { version = "0.3.1", features = ["cortex-m"] }

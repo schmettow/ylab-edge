@@ -12,7 +12,7 @@ pub struct SensorResult<R> {
 pub mod moi {
     use super::*;
     use hal::gpio::{Input, Pull};
-    use hal::peripherals::{PIN_21, PIN_22, PIN_8, PIN_9};
+    use hal::peripherals::{PIN_21, PIN_22};
 
     pub type Measure = bool;
     pub type Reading<const N: usize> = [Measure; N];
@@ -339,8 +339,7 @@ pub mod yxz_lsm6_old {
 pub mod yxz_lsm6 {
 
     use super::*;
-    use accelerometer::Accelerometer;
-    use hal::peripherals::I2C0 as I2C;
+    //use accelerometer::Accelerometer;
     use lsm6dsox::*;
     use Lsm6dsox as Lsm6;
 
@@ -352,15 +351,33 @@ pub mod yxz_lsm6 {
     pub type Reading = [Measure; N];
     pub type Sample = crate::Sample<Measure, N>;
 
+    async fn inner_task<I>(i2c_bus: &'static AsyncI2cBus<I>, hz: u64, sensory: u8)
+    where
+        I: hal::i2c::Instance,
+    {
+        let i2c = AsyncI2cDevice::new(&i2c_bus);
+        let mut sensor = Lsm6::new(i2c, SlaveAddress::Low).unwrap();
+        //let mut sensor = Lsm6::new(i2c, SlaveAddress::Low, time::Delay);
+    }
+
     #[embassy_executor::task]
-    pub async fn task(i2c: i2c::I2c<'static, I2C, Mode>, hz: u64, sensory: u8) {
-        let mut sensor = Lsm6::new(i2c, SlaveAddress::Low, time::Delay);
+    pub async fn task(i2c: i2c::I2c<'static, I2C0, Mode>, hz: u64, sensory: u8) {
+        let mut sensor = Lsm6::new(i2c, SlaveAddress::Low).unwrap();
         log::debug!("Yxz init");
-        sensor.setup().unwrap();
-        sensor.set_accel_sample_rate(DataRate::Freq1660Hz).unwrap();
-        sensor.set_accel_scale(AccelerometerScale::Accel2g).unwrap();
-        sensor.set_gyro_sample_rate(DataRate::Freq1660Hz).unwrap();
-        sensor.set_gyro_scale(GyroscopeScale::Dps250).unwrap();
+        sensor.setup(Delay).await.unwrap();
+        sensor
+            .set_accel_sample_rate(DataRate::Freq1660Hz)
+            .await
+            .unwrap();
+        sensor
+            .set_accel_scale(AccelerometerScale::Accel2g)
+            .await
+            .unwrap();
+        sensor
+            .set_gyro_sample_rate(DataRate::Freq1660Hz)
+            .await
+            .unwrap();
+        sensor.set_gyro_scale(GyroscopeScale::Dps250).await.unwrap();
         log::debug!("Yxz set");
         let mut ticker = Ticker::every(Duration::from_hz(hz));
         //let mut reading: Reading;
@@ -370,12 +387,12 @@ pub mod yxz_lsm6 {
         loop {
             if RECORD.load(ORD) {
                 log::debug!("Yxz get");
-                let accel = sensor.accel_norm().unwrap();
-                let gyro = sensor.angular_rate().unwrap();
+                let accel = sensor.accel_norm().await.unwrap();
+                let gyro = sensor.angular_rate().await.unwrap();
                 let reading = [
-                    accel.x,
-                    accel.y,
-                    accel.z,
+                    accel[0],
+                    accel[1],
+                    accel[2],
                     gyro.x.as_hertz() as f32,
                     gyro.y.as_hertz() as f32,
                     gyro.z.as_hertz() as f32,
@@ -393,10 +410,10 @@ pub mod yxz_lsm6 {
         }
     }
 
-    use xca9548a::{SlaveAddr, Xca9548a};
+    /*use xca9548a::{SlaveAddr, Xca9548a};
     #[embassy_executor::task]
     pub async fn multi_task(
-        i2c: i2c::I2c<'static, I2C, Mode>,
+        i2c: i2c::I2c<'static, I2C0, Mode>,
         n: u8,
         hz: u64,
         just_spin: bool,
@@ -411,12 +428,12 @@ pub mod yxz_lsm6 {
         let tca = Xca9548a::new(i2c, SlaveAddr::default());
         DISP.signal([None, None, None, Some("TCA |==| I2C".try_into().unwrap())]);
         let hub = tca.split();
-        let sen_0 = Lsm6::new(hub.i2c0, SlaveAddress::Low, time::Delay);
-        let sen_1 = Lsm6::new(hub.i2c1, SlaveAddress::Low, time::Delay);
-        let sen_2 = Lsm6::new(hub.i2c2, SlaveAddress::Low, time::Delay);
-        let sen_3 = Lsm6::new(hub.i2c3, SlaveAddress::Low, time::Delay);
-        let sen_4 = Lsm6::new(hub.i2c4, SlaveAddress::Low, time::Delay);
-        let sen_5 = Lsm6::new(hub.i2c5, SlaveAddress::Low, time::Delay);
+        let sen_0 = Lsm6::new(hub.i2c0, SlaveAddress::Low);
+        let sen_1 = Lsm6::new(hub.i2c1, SlaveAddress::Low);
+        let sen_2 = Lsm6::new(hub.i2c2, SlaveAddress::Low);
+        let sen_3 = Lsm6::new(hub.i2c3, SlaveAddress::Low);
+        let sen_4 = Lsm6::new(hub.i2c4, SlaveAddress::Low);
+        let sen_5 = Lsm6::new(hub.i2c5, SlaveAddress::Low);
         //let sen_6 = Lsm6::new(hub.i2c6, SlaveAddress::Low, time::Delay);
         //let sen_7 = Lsm6::new(hub.i2c7, SlaveAddress::Low, time::Delay);
         let mut sensors = [sen_0, sen_1, sen_2, sen_3, sen_4, sen_5]; // sen_6, sen_7];
@@ -468,7 +485,7 @@ pub mod yxz_lsm6 {
                 ticker.next().await;
             };
         }
-    }
+    }*/
 }
 /// ## BMI Acceleration Sensor
 
@@ -476,7 +493,6 @@ pub mod yxz_bmi160 {
     use super::*;
     #[allow(unused)]
     use bmi160::{AccelerometerPowerMode, Bmi160, GyroscopePowerMode, SensorSelector, SlaveAddr};
-    use hal::peripherals::I2C1 as I2C;
 
     /* control channels */
     pub static READY: AtomicBool = AtomicBool::new(false);
@@ -489,7 +505,7 @@ pub mod yxz_bmi160 {
     pub type Sample = crate::Sample<Measure, N>;
 
     #[embassy_executor::task]
-    pub async fn task(i2c: i2c::I2c<'static, I2C, Mode>, hz: u64, sensory: u8) {
+    pub async fn task(i2c: i2c::I2c<'static, I2C1, Mode>, hz: u64, sensory: u8) {
         //DISP.signal([None, None, None, Some("BMI160 task".try_into().unwrap())]);
         let address = SlaveAddr::default();
         let mut sensor = Bmi160::new_with_i2c(i2c, address);
@@ -540,7 +556,7 @@ pub mod yxz_bmi160 {
 pub mod yxz_tlv {
     use super::*;
     //use hal::peripherals::I2C0 as I2C;
-    use embassy_embedded_hal::shared_bus::asynch::i2c::I2cDevice;
+    //use embassy_embedded_hal::shared_bus::asynch::i2c::I2cDevice;
     #[allow(unused)]
     use tlv493d as tlv;
 
@@ -560,9 +576,9 @@ pub mod yxz_tlv {
 
     async fn inner_task<I>(i2c_bus: &'static AsyncI2cBus<I>, hz: u64, sensory: u8)
     where
-        I: embassy_rp::i2c::Instance,
+        I: hal::i2c::Instance,
     {
-        let i2c = I2cDevice::new(&i2c_bus);
+        let i2c = AsyncI2cDevice::new(&i2c_bus);
         //DISP.signal([None, None, None, Some("LVT task".try_into().unwrap())]);
         let address = 0x5E;
         let mut sensor = tlv::Tlv493d::new_async(i2c, address, tlv::Mode::Master)
@@ -590,18 +606,25 @@ pub mod yxz_tlv {
 
 pub mod yirt_max {
     use super::*;
-    use hal::peripherals::I2C0 as I2C;
     use max3010x::{Led, Max3010x, SampleAveraging};
 
     /* control channels */
     pub static READY: AtomicBool = AtomicBool::new(false);
     pub static RECORD: AtomicBool = AtomicBool::new(false);
     pub type Reading = [u32; 8];
-    /// <--- 4 channel is total accel for now
     pub type Measure = SensorResult<Reading>;
 
+    /*use embassy_embedded_hal::shared_bus::asynch::i2c::I2cDevice;
+    async fn inner_task<I>(i2c_bus: &'static AsyncI2cBus<I>, hz: u64, sensory: u8)
+    where
+        I: embassy_rp::i2c::Instance,
+    {
+        let i2c = I2cDevice::new(&i2c_bus);
+        let mut sensor = Max3010x::new_max30102(i2c).into_multi_led().unwrap();
+    }*/
+
     #[embassy_executor::task]
-    pub async fn task(i2c: i2c::I2c<'static, I2C, Mode>, hz: u64, sensory: u8) {
+    pub async fn task(i2c: i2c::I2c<'static, I2C0, Mode>, hz: u64, sensory: u8) {
         // Sensor specific
         let mut sensor = Max3010x::new_max30102(i2c).into_multi_led().unwrap();
         sensor
