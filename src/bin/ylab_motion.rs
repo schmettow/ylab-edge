@@ -70,29 +70,20 @@ fn init() -> ! {
     spawn_core1(p.CORE1, unsafe { &mut CORE1_STACK }, move || {
         let executor1 = EXECUTOR1.init(Executor::new());
         executor1.run(|spawner| {
-            let i2c0 = p.I2C0;
-            if DEV.2 {
-                // LSM on Grove 1
-                let mut config = Config::default();
-                config.frequency = SPEED.into();
-                let i2c = i2c::I2c::new_async(i2c0, p.PIN_1, p.PIN_0, Irqs, config);
-                match N_PROBES {
-                    0 => {}
-                    1 => spawner
-                        .spawn(ylab::ysns::yxz_lsm6::task(i2c, HZ.2, 2))
-                        .unwrap(),
-                    2..=8 => spawner
-                        .spawn(ylab::ysns::yxz_lsm6::multi_task(
-                            i2c,
-                            N_PROBES as u8,
-                            HZ.2 / N_PROBES as u64,
-                            false,
-                            2,
-                        ))
-                        .unwrap(),
-                    _ => return,
-                }
-            }
+            let config = Config::default();
+            //config.frequency = SPEED.into();
+            let i2c0 = i2c::I2c::new_async(p.I2C0, p.PIN_1, p.PIN_0, Irqs, config);
+            static I2C_BUS_0: StaticCell<AsyncI2cBus<I2C0>> = StaticCell::new();
+            let i2c_bus_0 = I2C_BUS_0.init(embassy_sync::mutex::Mutex::new(i2c0));
+            spawner
+                .spawn(ylab::ysns::yxz_lsm6::multi_task_0(
+                    i2c_bus_0,
+                    N_PROBES as u8,
+                    HZ.2 / N_PROBES as u64,
+                    false,
+                    2,
+                ))
+                .unwrap();
         })
     });
 

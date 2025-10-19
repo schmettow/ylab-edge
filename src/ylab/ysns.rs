@@ -357,13 +357,6 @@ pub mod yxz_lsm6 {
     {
         let i2c = AsyncI2cDevice::new(&i2c_bus);
         let mut sensor = Lsm6::new(i2c, SlaveAddress::Low).unwrap();
-        //let mut sensor = Lsm6::new(i2c, SlaveAddress::Low, time::Delay);
-    }
-
-    #[embassy_executor::task]
-    pub async fn task(i2c: i2c::I2c<'static, I2C0, Mode>, hz: u64, sensory: u8) {
-        let mut sensor = Lsm6::new(i2c, SlaveAddress::Low).unwrap();
-        log::debug!("Yxz init");
         sensor.setup(Delay).await.unwrap();
         sensor
             .set_accel_sample_rate(DataRate::Freq1660Hz)
@@ -390,9 +383,9 @@ pub mod yxz_lsm6 {
                 let accel = sensor.accel_norm().await.unwrap();
                 let gyro = sensor.angular_rate().await.unwrap();
                 let reading = [
-                    accel[0],
-                    accel[1],
-                    accel[2],
+                    accel.x.as_meters_per_second_per_second() as f32,
+                    accel.y.as_meters_per_second_per_second() as f32,
+                    accel.z.as_meters_per_second_per_second() as f32,
                     gyro.x.as_hertz() as f32,
                     gyro.y.as_hertz() as f32,
                     gyro.z.as_hertz() as f32,
@@ -408,32 +401,35 @@ pub mod yxz_lsm6 {
                 ticker.next().await;
             };
         }
+        //let mut sensor = Lsm6::new(i2c, SlaveAddress::Low, time::Delay);
     }
 
-    /*use xca9548a::{SlaveAddr, Xca9548a};
     #[embassy_executor::task]
-    pub async fn multi_task(
-        i2c: i2c::I2c<'static, I2C0, Mode>,
+    pub async fn task_0(i2c_bus: &'static AsyncI2cBus<I2C0>, hz: u64, sensory: u8) {
+        inner_task(i2c_bus, hz, sensory).await;
+    }
+
+    /// Multi-task
+    use xca9548a::{SlaveAddr, Xca9548a};
+    async fn inner_multi_task<I>(
+        i2c_bus: &'static AsyncI2cBus<I>,
         n: u8,
         hz: u64,
-        just_spin: bool,
         sensory: u8,
-    ) {
-        DISP.signal([
-            None,
-            None,
-            None,
-            Some("Multi-Lsm6 task".try_into().unwrap()),
-        ]);
-        let tca = Xca9548a::new(i2c, SlaveAddr::default());
-        DISP.signal([None, None, None, Some("TCA |==| I2C".try_into().unwrap())]);
+        just_spin: bool,
+    ) where
+        I: hal::i2c::Instance,
+    {
+        let i2c_tca = AsyncI2cDevice::new(&i2c_bus);
+        let tca = Xca9548a::new(i2c_tca, SlaveAddr::default());
         let hub = tca.split();
-        let sen_0 = Lsm6::new(hub.i2c0, SlaveAddress::Low);
-        let sen_1 = Lsm6::new(hub.i2c1, SlaveAddress::Low);
-        let sen_2 = Lsm6::new(hub.i2c2, SlaveAddress::Low);
-        let sen_3 = Lsm6::new(hub.i2c3, SlaveAddress::Low);
-        let sen_4 = Lsm6::new(hub.i2c4, SlaveAddress::Low);
-        let sen_5 = Lsm6::new(hub.i2c5, SlaveAddress::Low);
+
+        let sen_0 = Lsm6::new(hub.i2c0, SlaveAddress::Low).unwrap();
+        let sen_1 = Lsm6::new(hub.i2c1, SlaveAddress::Low).unwrap();
+        let sen_2 = Lsm6::new(hub.i2c2, SlaveAddress::Low).unwrap();
+        let sen_3 = Lsm6::new(hub.i2c3, SlaveAddress::Low).unwrap();
+        let sen_4 = Lsm6::new(hub.i2c4, SlaveAddress::Low).unwrap();
+        let sen_5 = Lsm6::new(hub.i2c5, SlaveAddress::Low).unwrap();
         //let sen_6 = Lsm6::new(hub.i2c6, SlaveAddress::Low, time::Delay);
         //let sen_7 = Lsm6::new(hub.i2c7, SlaveAddress::Low, time::Delay);
         let mut sensors = [sen_0, sen_1, sen_2, sen_3, sen_4, sen_5]; // sen_6, sen_7];
@@ -445,8 +441,8 @@ pub mod yxz_lsm6 {
                 continue;
             }
             if let (Ok(_), Ok(_)) = (
-                sens.set_accel_sample_rate(data_rate),
-                sens.set_gyro_sample_rate(data_rate),
+                sens.set_accel_sample_rate(data_rate).await,
+                sens.set_gyro_sample_rate(data_rate).await,
             ) {
                 sensor_active[s] = true;
             };
@@ -462,12 +458,13 @@ pub mod yxz_lsm6 {
                     if s >= n as usize {
                         continue;
                     }
-
-                    if let (Ok(accel), Ok(gyro)) = (sensor.accel_norm(), sensor.angular_rate()) {
+                    if let (Ok(accel), Ok(gyro)) =
+                        (sensor.accel_norm().await, sensor.angular_rate().await)
+                    {
                         let reading = [
-                            accel.x,
-                            accel.y,
-                            accel.z,
+                            accel.x.as_meters_per_second_per_second() as f32,
+                            accel.y.as_meters_per_second_per_second() as f32,
+                            accel.z.as_meters_per_second_per_second() as f32,
                             gyro.x.as_hertz() as f32,
                             gyro.y.as_hertz() as f32,
                             gyro.z.as_hertz() as f32,
@@ -485,7 +482,18 @@ pub mod yxz_lsm6 {
                 ticker.next().await;
             };
         }
-    }*/
+    }
+
+    #[embassy_executor::task]
+    pub async fn multi_task_0(
+        i2c_bus: &'static AsyncI2cBus<I2C0>,
+        n: u8,
+        hz: u64,
+        just_spin: bool,
+        sensory: u8,
+    ) {
+        inner_multi_task(i2c_bus, n, hz, sensory, just_spin).await
+    }
 }
 /// ## BMI Acceleration Sensor
 
