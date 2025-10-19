@@ -148,44 +148,34 @@ pub mod adc {
     }
 }
 
-/*
 ///# ADS1015 on I2C1
-pub mod ads1015 {
+/*pub mod ads1015 {
     use super::*;
+    use ads::DataRate12Bit as DataRate;
     /// ## Sensor Generics
-    use embassy_time::{Duration, Ticker, Instant};
-
-    /// ## I2C
-    use embassy_rp::i2c::{self};
-    ///
-    /// Change this and Data Rate to switch I2C0/1
-    use hal::peripherals::I2C1 as I2C;
-    use ads1x1x::{channel, Ads1x1x, SlaveAddr};
-    use ads1x1x::DataRate12Bit as DataRate;
-    use nb::block;
-
-    // ITC
-    // Data
-    pub struct SensorResult<R> {
-        pub time: Instant,
-        pub reading: R,
-    }
-    type Reading = [i16;4];
-    type Measure = SensorResult<Reading>;
-    pub static RESULT:Signal<Mutex, Measure> = Signal::new();
-
+    use ads1x1x as ads;
+    const N: usize = 4;
+    pub type Measure = f32;
+    pub type Reading = [Measure; N];
+    pub type Sample = crate::Sample<Measure, N>;
     /* control channels */
     pub use core::sync::atomic::Ordering;
-    use core::sync::atomic::AtomicBool;
-    pub static READY: AtomicBool = AtomicBool::new(false);
+    pub static READY: core::sync::atomic::AtomicBool = AtomicBool::new(false);
     pub static RECORD: AtomicBool = AtomicBool::new(false);
 
+    async fn inner_task<I>(i2c_bus: &'static AsyncI2cBus<I>, hz: u64, sensory: u8)
+    where
+        I: hal::i2c::Instance,
+    {
+        let i2c = AsyncI2cDevice::new(&i2c_bus);
+        let address = ads::TargetAddr::default();
+        let mut ads = ads::Ads1x1x::new_ads1015(i2c, address);
+    }
+
     #[embassy_executor::task]
-    pub async fn task(i2c: i2c::I2c<'static, I2C, i2c::Async>,
-                      hz: u64) {
+    pub async fn task(i2c: i2c::I2c<'static, I2C, i2c::Async>, hz: u64) {
         let address = SlaveAddr::default();
-        let mut ads
-                = Ads1x1x::new_ads1015(i2c, address);
+        let mut ads = Ads1x1x::new_ads1015(i2c, address);
         // ads.set_data_rate(DataRate16Bit::Sps860).unwrap();
         ads.set_data_rate(DataRate::Sps3300).unwrap();
         let mut ticker = Ticker::every(Duration::from_hz(hz));
@@ -194,87 +184,86 @@ pub mod ads1015 {
         READY.store(true, ORD);
         loop {
             ticker.next().await;
-            if RECORD.load(ORD){
+            if RECORD.load(ORD) {
                 reading = [0; 4
                     /*block!(ads.read(&mut channel::SingleA0)).unwrap(),
                     block!(ads.read(&mut channel::SingleA1)).unwrap(),
                     block!(ads.read(&mut channel::SingleA2)).unwrap(),
                     block!(ads.read(&mut channel::SingleA3)).unwrap(),*/
                     ];
-                result = SensorResult{time: Instant::now(),
-                                      reading: reading};
-                log::info!("{},2,{},{},{},{},,,,",
+                result = SensorResult {
+                    time: Instant::now(),
+                    reading: reading,
+                };
+                log::info!(
+                    "{},2,{},{},{},{},,,,",
                     result.time.as_micros(),
                     result.reading[0],
                     result.reading[1],
                     result.reading[2],
-                    result.reading[3],);
-                    };
-                }
-            }
+                    result.reading[3],
+                );
+            };
+        }
     }
-
+}*/
 
 /* ADS1115 Sensor I2C1 */
 pub mod ads1115 {
     use super::*;
-    /* Sensor Generics */
-    use embassy_time::{Duration, Ticker, Instant};
-
-    // I2C
-    use hal::i2c::{self};
-    use hal::peripherals::I2C1 as I2C;
-    use ads1x1x::{channel, Ads1x1x, SlaveAddr};
-    // ads1115 takes 16 bit
-    use ads1x1x::DataRate16Bit as DataRate; // <-----
-    use nb::block;
+    use ads1x1x::{channel, DataRate16Bit as DataRate};
+    use ads1x1x::{Ads1x1x, TargetAddr};
 
     // Data
-    pub struct SensorResult<R> {
-        pub time: Instant,
-        pub reading: R,
-    }
-    type Reading = [i16;4];
-    type Measure = SensorResult<Reading>;
-    pub static RESULT:Signal<Mutex, Measure> = Signal::new();
 
+    pub const N: usize = 4;
+    pub type Measure = f32;
+    pub type Reading = [Measure; N];
+    pub type Sample = crate::Sample<Measure, N>;
     /* control channels */
     pub static READY: AtomicBool = AtomicBool::new(false);
     pub static RECORD: AtomicBool = AtomicBool::new(false);
 
     #[embassy_executor::task]
-    pub async fn task(i2c: i2c::I2c<'static, I2C, i2c::Async>,
-                      hz: u64) {
-        let address = SlaveAddr::default();
-        let mut ads
-                = Ads1x1x::new_ads1115(i2c, address);
-        ads.set_data_rate(DataRate::Sps860).unwrap();
-        let mut ticker = Ticker::every(Duration::from_hz(hz));
-        let mut reading: Reading;
-        let mut result: SensorResult<Reading>;
-        READY.store(true, ORD);
-        loop {
-            ticker.next().await;
-            if RECORD.load(ORD){
-                reading = [0; 4];
-                    /*block!(ads.read(&mut channel::SingleA0)).unwrap(),
-                    block!(ads.read(&mut channel::SingleA1)).unwrap(),
-                    block!(ads.read(&mut channel::SingleA2)).unwrap(),
-                    block!(ads.read(&mut channel::SingleA3)).unwrap(),];*/
-                result = SensorResult{time: Instant::now(),
-                                      reading: reading};
-                log::info!("{},2,{},{},{},{},,,,",
-                    result.time.as_micros(),
-                    result.reading[0],
-                    result.reading[1],
-                    result.reading[2],
-                    result.reading[3],);
-                    };
-                }
-            }
+    pub async fn task_0(i2c_bus: &'static AsyncI2cBus<I2C0>, hz: u64, sensory: u8) {
+        inner_task(i2c_bus, hz, sensory).await
     }
 
-*/
+    #[embassy_executor::task]
+    pub async fn task_1(i2c_bus: &'static AsyncI2cBus<I2C1>, hz: u64, sensory: u8) {
+        inner_task(i2c_bus, hz, sensory).await
+    }
+
+    async fn inner_task<I>(i2c_bus: &'static AsyncI2cBus<I>, hz: u64, sensory: u8)
+    where
+        I: i2c::Instance,
+    {
+        let address = TargetAddr::default();
+        let i2c = AsyncI2cDevice::new(&i2c_bus);
+        let mut ads = Ads1x1x::new_ads1115(i2c, address).await;
+        ads.set_data_rate(DataRate::Sps860).await.unwrap();
+        let mut ticker = Ticker::every(Duration::from_hz(hz));
+        READY.store(true, ORD);
+        loop {
+            if RECORD.load(ORD) {
+                let reading: Reading = [
+                    ads.read(channel::SingleA0).await.unwrap().into(),
+                    ads.read(channel::SingleA1).await.unwrap().into(),
+                    ads.read(channel::SingleA2).await.unwrap().into(),
+                    ads.read(channel::SingleA3).await.unwrap().into(),
+                ];
+                let sample = Sample {
+                    sensory: sensory,
+                    time: Instant::now(),
+                    read: reading,
+                };
+                SINK.send(sample.into()).await;
+                log::debug!("Yxz read");
+            };
+            ticker.next().await;
+        }
+    }
+}
 
 pub mod yxz_lsm6_old {
     use super::*;

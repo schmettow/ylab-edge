@@ -82,6 +82,8 @@ fn init() -> ! {
             unwrap!(spawner.spawn(ylab::ysns::yxz_lsm6::multi_task_0(
                 i2c_bus_0, 4, 1, false, 2
             )));
+            unwrap!(spawner.spawn(ylab::ysns::ads1115::task_1(i2c_bus_1, 4, 3)));
+            unwrap!(spawner.spawn(yuio::disp::task_1(i2c_bus_1)));
         })
     });
 
@@ -90,7 +92,6 @@ fn init() -> ! {
         // task for controlling the led
         unwrap!(spawner.spawn(yled::task(p.PIN_25.into())));
         // task for receiving text and put it on an OLED 1306
-        unwrap!(spawner.spawn(yuio::disp::task_1(i2c_bus_1)));
         // task for listening to button presses.
         unwrap!(spawner.spawn(ybtn::task(p.PIN_20.into())));
         // task listening for data packeges to send up the line (reverse USB ;)
