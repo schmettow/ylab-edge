@@ -51,20 +51,10 @@ pub mod led {
 
 pub mod disp {
     use super::*;
-    use hal::i2c;
-    use hal::peripherals::I2C1 as I2C;
-    use i2c::Async as Mode;
-
-    //pub use heapless::String;
-    // use itoa;
-    /* use embedded_graphics::{ // <--- reactivate graphic output
-        pixelcolor::BinaryColor,
-        prelude::*,
-        image::{Image, ImageRaw},
-        text::{Baseline, Text},
-        mono_font::{ascii::FONT_6X10, MonoTextStyleBuilder},
-    };*/
-    use ssd1306::{prelude::*, I2CDisplayInterface, Ssd1306};
+    //use hal::i2c;
+    //use hal::peripherals::I2C1 as I2C;
+    //use i2c::Async as Mode;
+    use ssd1306::{prelude::*, I2CDisplayInterface, Ssd1306, Ssd1306Async};
     // inter-thread communication
 
     pub type OneLine = String<20>;
@@ -72,19 +62,33 @@ pub mod disp {
 
     pub static TEXT: Signal<RawMutex, FourLines> = Signal::new();
 
-    // Text display
-    use core::fmt::Write;
+    #[embassy_executor::task]
+    pub async fn task_0(i2c_bus: &'static AsyncI2cBus<I2C0>) {
+        inner_task(i2c_bus).await
+    }
 
     #[embassy_executor::task]
-    pub async fn task(i2c: i2c::I2c<'static, I2C, Mode>) {
+    pub async fn task_1(i2c_bus: &'static AsyncI2cBus<I2C1>) {
+        inner_task(i2c_bus).await
+    }
+
+    // Text display
+    //use core::fmt::Write;
+
+    async fn inner_task<I>(i2c_bus: &'static AsyncI2cBus<I>)
+    where
+        I: hal::i2c::Instance,
+    {
+        let i2c = AsyncI2cDevice::new(&i2c_bus);
         let interface = I2CDisplayInterface::new(i2c);
-        let mut display = Ssd1306::new(interface, DisplaySize128x64, DisplayRotation::Rotate0)
+        let mut display = Ssd1306Async::new(interface, DisplaySize128x64, DisplayRotation::Rotate0)
             .into_terminal_mode();
-        match display.init() {
+        //display.into_buffered_graphics_mode();
+        match display.init().await {
             Err(_) => {}
             Ok(_) => {
-                display.init().unwrap();
-                //let _ = display.write_str("Ydsp");
+                display.init().await.unwrap();
+                let _ = display.write_str("Ydsp").await.unwrap();
 
                 loop {
                     let mesg: FourLines = TEXT.wait().await;
@@ -105,54 +109,3 @@ pub mod disp {
         }
     }
 }
-
-/*pub mod disp {
-    // I2C
-    use embassy_rp::i2c::{self};
-    use embassy_rp::peripherals::I2C0;
-    pub use heapless::String;
-    // use itoa;
-    /* use embedded_graphics::{ // <--- reactivate graphic output
-        pixelcolor::BinaryColor,
-        prelude::*,
-        image::{Image, ImageRaw},
-        text::{Baseline, Text},
-        mono_font::{ascii::FONT_6X10, MonoTextStyleBuilder},
-    };*/
-    use ssd1306::{prelude::*, I2CDisplayInterface, Ssd1306};
-    // inter-thread communication
-    use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-    use embassy_sync::signal::Signal;
-
-    pub type OneLine = String<20>;
-    pub type FourLines = [OneLine; 4];
-
-    pub static TEXT: Signal<CriticalSectionRawMutex, FourLines>
-                = Signal::new();
-
-    // Text display
-    use core::fmt::Write;
-
-    #[embassy_executor::task]
-    pub async fn task(i2c: i2c::I2c<'static, I2C0, i2c::Async>) {
-        let interface
-            = I2CDisplayInterface::new(i2c);
-        let mut display =
-            Ssd1306::new(interface,
-                    DisplaySize128x64,
-                    DisplayRotation::Rotate0)
-            .into_terminal_mode();
-        display.init().unwrap();
-        let _ = display.write_str("YLab");
-
-        loop {
-            let mesg: FourLines = TEXT.wait().await;
-            let _ = display.clear();
-            //let mut str_conv = itoa::Buffer::new(); // conversion to string
-            for row in mesg {
-                let _ = display.write_str(row.as_str());
-            }
-
-        }
-    }
-}*/

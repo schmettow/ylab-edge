@@ -8,6 +8,8 @@ static DEV: (bool, bool, bool) = (true, true, true);
 static HZ: (u64, u64, u64) = (0, 211, 0);
 static SPEED: u32 = 100_000;
 static RUN_DISP: bool = false;
+use core::cell::RefCell;
+
 use {defmt_rtt as _, panic_probe as _};
 
 /// The following code initializes the second stack, plus
@@ -18,11 +20,6 @@ static EXECUTOR0: StaticCell<Executor> = StaticCell::new();
 static EXECUTOR1: StaticCell<Executor> = StaticCell::new();
 
 use ydsp::TEXT as DISP;
-/// +  multi-threading with async
-// use embassy_executor::Spawner;
-/// + timing using Embassy time
-// use embassy_time::{Duration, Ticker};
-/// + peripherals
 use ylab::*;
 use ysns::adc as yadc;
 use ysns::moi;
@@ -66,17 +63,25 @@ use hal::multicore::{spawn_core1, Stack};
 #[cortex_m_rt::entry]
 fn init() -> ! {
     let p = hal::init(Default::default());
+    // Init I2C shared busses
+    let config = Config::default();
+    static I2C_BUS_0: StaticCell<AsyncI2cBus<I2C0>> = StaticCell::new();
+    let i2c0 = i2c::I2c::new_async(p.I2C0, p.PIN_1, p.PIN_0, Irqs, config);
+    #[allow(unused_variables)]
+    let i2c_bus_0 = I2C_BUS_0.init(embassy_sync::mutex::Mutex::new(i2c0));
+    static I2C_BUS_1: StaticCell<AsyncI2cBus<I2C1>> = StaticCell::new();
+    let i2c1 = i2c::I2c::new_async(p.I2C1, p.PIN_3, p.PIN_2, Irqs, config);
+    #[allow(unused_variables)]
+    let i2c_bus_1 = I2C_BUS_1.init(embassy_sync::mutex::Mutex::new(i2c1));
+
     spawn_core1(p.CORE1, unsafe { &mut CORE1_STACK }, move || {
         let executor1 = EXECUTOR1.init(Executor::new());
 
         executor1.run(|spawner| {
-            let i2c_contr = p.I2C0;
-            if DEV.2 {
-                let mut config = Config::default();
-                config.frequency = SPEED.into();
-                let i2c = i2c::I2c::new_async(i2c_contr, p.PIN_9, p.PIN_8, Irqs, config);
-                unwrap!(spawner.spawn(ylab::ysns::yco2::task(i2c, 2)));
-            }
+            unwrap!(spawner.spawn(ylab::ysns::yirt_max::task_0(i2c_bus_0, 1, 2)));
+            unwrap!(spawner.spawn(ylab::ysns::yxz_lsm6::multi_task_0(
+                i2c_bus_0, 4, 1, false, 2
+            )));
         })
     });
 
@@ -85,12 +90,7 @@ fn init() -> ! {
         // task for controlling the led
         unwrap!(spawner.spawn(yled::task(p.PIN_25.into())));
         // task for receiving text and put it on an OLED 1306
-        // Display will use I2C1 on
-        if RUN_DISP {
-            let i2c_contr = p.I2C1;
-            let i2c = i2c::I2c::new_async(i2c_contr, p.PIN_3, p.PIN_2, Irqs, Config::default());
-            unwrap!(spawner.spawn(ydsp::task(i2c)));
-        }
+        unwrap!(spawner.spawn(yuio::disp::task_1(i2c_bus_1)));
         // task for listening to button presses.
         unwrap!(spawner.spawn(ybtn::task(p.PIN_20.into())));
         // task listening for data packeges to send up the line (reverse USB ;)

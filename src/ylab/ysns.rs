@@ -622,56 +622,24 @@ pub mod yirt_max {
     pub type Reading = [u32; 8];
     pub type Measure = SensorResult<Reading>;
 
-    /*use embassy_embedded_hal::shared_bus::asynch::i2c::I2cDevice;
     async fn inner_task<I>(i2c_bus: &'static AsyncI2cBus<I>, hz: u64, sensory: u8)
     where
         I: embassy_rp::i2c::Instance,
     {
-        let i2c = I2cDevice::new(&i2c_bus);
-        let mut sensor = Max3010x::new_max30102(i2c).into_multi_led().unwrap();
-    }*/
+        let i2c = AsyncI2cDevice::new(&i2c_bus);
+        let sensor = Max3010x::new_max30102(i2c);
+        sensor
+            .into_multi_led()
+            .await
+            .unwrap()
+            .wake_up()
+            .await
+            .unwrap();
+    }
 
     #[embassy_executor::task]
-    pub async fn task(i2c: i2c::I2c<'static, I2C0, Mode>, hz: u64, sensory: u8) {
-        // Sensor specific
-        let mut sensor = Max3010x::new_max30102(i2c).into_multi_led().unwrap();
-        sensor
-            .set_sampling_rate(max3010x::SamplingRate::Sps3200)
-            .unwrap();
-        sensor.set_sample_averaging(SampleAveraging::Sa16).unwrap();
-        sensor.set_pulse_amplitude(Led::All, 15).unwrap();
-        sensor.enable_fifo_rollover().unwrap();
-        sensor.wake_up().unwrap();
-
-        let mut data: [u32; 1] = [0; 1];
-        let _ = sensor.read_fifo(&mut data).unwrap();
-        DISP.signal([
-            None,
-            None,
-            None,
-            Some("IRTmax can read".try_into().unwrap()),
-        ]);
-        // Ticker
-        let mut ticker = Ticker::every(Duration::from_hz(hz));
-        //let mut result: SensorResult<Reading>;
-        READY.store(true, ORD);
-        loop {
-            if RECORD.load(ORD) {
-                let mut reading = [0; 1];
-                let _ = sensor.read_fifo(&mut reading);
-
-                let sample = Sample {
-                    sensory: sensory,
-                    time: Instant::now(),
-                    read: reading,
-                };
-                SINK.send(sample.into()).await;
-                /*log::info!("{},1,{},,,,,,,",
-                Instant::now().as_micros(),
-                reading[0]);*/
-                ticker.next().await;
-            };
-        }
+    pub async fn task_0(i2c_bus: &'static AsyncI2cBus<I2C0>, hz: u64, sensory: u8) {
+        inner_task(i2c_bus, hz, sensory).await
     }
 }
 

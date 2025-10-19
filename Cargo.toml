@@ -68,7 +68,7 @@ embedded-hal = { version = "1.0.0" }
 lsm6ds33 = "0.5.0"
 ads1x1x = "0.3.0"
 #embedded-ads111x = "0.1.1"
-ssd1306 = "0.10.0"
+ssd1306 = { version = "0.10.0", features = ["async"] }
 embedded-graphics = "0.8"
 itoa = "1.0.15"
 heapless = "0.9.1"
@@ -77,7 +77,7 @@ bmi160 = "1.1.0"
 # bmi160 = {path = "../bmi160-async"}
 mlx9061x = "0.3.0"
 scd4x = { version = "0.4.1", default-features = false, features = ["scd41"] }
-max3010x = { version = "0.2.0", default-features = false }
+max3010x = { path = "../async-max3010x-rs", default-features = false }
 lsm6dsox = { path = "../lsm6dsox" }
 xca9548a = { path = "../async-xca9548a-rs" }
 #sensor-tlv493d = {version = "0.1.0", default-features = false}
