@@ -264,67 +264,6 @@ pub mod ads1115 {
         }
     }
 }
-
-pub mod yxz_lsm6_old {
-    use super::*;
-    use hal::peripherals::I2C0 as I2C;
-    use i2c::Blocking as Mode;
-    use lsm6ds33::Lsm6ds33 as Lsm6;
-
-    /* control channels */
-    pub static READY: AtomicBool = AtomicBool::new(false);
-    pub static RECORD: AtomicBool = AtomicBool::new(false);
-
-    // Generic result
-    /*pub struct SensorResult<R> {
-        pub time: Instant,
-        pub reading: R,
-    }*/
-    pub type Reading = [f32; 3];
-    /// <--- 4 channel is total accel for now
-    pub type Measure = SensorResult<Reading>;
-
-    #[embassy_executor::task]
-    pub async fn task(i2c: i2c::I2c<'static, I2C, Mode>, hz: u64, sensory: u8) {
-        DISP.signal([None, None, None, Some("Lsm6 task".try_into().unwrap())]);
-        let sensor_res: Result<
-            Lsm6<i2c::I2c<'_, I2C, Mode>>,
-            (i2c::I2c<'_, I2C, Mode>, lsm6ds33::Error<i2c::Error>),
-        > = Lsm6::new(i2c, 0x6Au8);
-        let mut sensor = match sensor_res {
-            Result::Ok(sensor) => sensor,
-            Result::Err(_) => {
-                DISP.signal([None, None, None, Some("Lsm6 =/= I2C".try_into().unwrap())]);
-                panic!()
-            }
-        };
-        let mut ticker = Ticker::every(Duration::from_hz(hz));
-        let mut reading: Reading;
-        let mut result: SensorResult<Reading>;
-        READY.store(true, ORD);
-        DISP.signal([None, None, None, Some("Lsm6 ticking".try_into().unwrap())]);
-        loop {
-            //DISP.signal([None, None, None, Some("Lsm6 reading".try_into().unwrap())]);
-            ticker.next().await;
-            if RECORD.load(ORD) {
-                reading = sensor.read_accelerometer().unwrap().into();
-                result = Measure {
-                    time: Instant::now(),
-                    reading: reading,
-                };
-                log::info!(
-                    "{},{},{},{},{},,,,",
-                    sensory,
-                    result.time.as_micros(),
-                    result.reading[0],
-                    result.reading[1],
-                    result.reading[2],
-                );
-            };
-        }
-    }
-}
-
 pub mod yxz_lsm6 {
 
     use super::*;
@@ -490,6 +429,7 @@ pub mod yxz_bmi160 {
     use super::*;
     #[allow(unused)]
     use bmi160::{AccelerometerPowerMode, Bmi160, GyroscopePowerMode, SensorSelector, SlaveAddr};
+    use lsm6dsox::AsyncI2c;
 
     /* control channels */
     pub static READY: AtomicBool = AtomicBool::new(false);
@@ -502,17 +442,24 @@ pub mod yxz_bmi160 {
     pub type Sample = crate::Sample<Measure, N>;
 
     #[embassy_executor::task]
-    pub async fn task(i2c: i2c::I2c<'static, I2C1, Mode>, hz: u64, sensory: u8) {
+    pub async fn task_0(i2c_bus: &'static AsyncI2cBus<I2C0>, hz: u64, sensory: u8) {
+        inner_task::<I2C0>(&i2c_bus, hz, sensory).await
+    }
+
+    pub async fn inner_task<I>(i2c_bus: &'static AsyncI2cBus<I2C0>, hz: u64, sensory: u8) {
         //DISP.signal([None, None, None, Some("BMI160 task".try_into().unwrap())]);
+        let i2c = AsyncI2cDevice::new(&i2c_bus);
         let address = SlaveAddr::default();
         let mut sensor = Bmi160::new_with_i2c(i2c, address);
         //DISP.signal([None, Some("BMI160 |==| I2C".try_into().unwrap()), None, None]);
         sensor
             .set_accel_power_mode(AccelerometerPowerMode::Normal)
+            .await
             .unwrap();
         //DISP.signal([None, Some("BMI160 accel".try_into().unwrap()), None, None]);
         sensor
             .set_gyro_power_mode(GyroscopePowerMode::Normal)
+            .await
             .unwrap();
         //DISP.signal([None, Some("BMI160 gyro".try_into().unwrap()), None, None]);
         //DISP.signal([None, None, None, Some("BMI160 set".try_into().unwrap())]);
@@ -525,7 +472,10 @@ pub mod yxz_bmi160 {
             ticker.next().await;
             if RECORD.load(ORD) {
                 DISP.signal([None, None, None, Some("BMI160 ...".try_into().unwrap())]);
-                let data = sensor.data(SensorSelector::new().accel().gyro()).unwrap();
+                let data = sensor
+                    .data(SensorSelector::new().accel().gyro())
+                    .await
+                    .unwrap();
                 let acc = data.accel.unwrap();
                 let gyr = data.gyro.unwrap();
                 DISP.signal([None, None, None, Some("BMI160     ...".try_into().unwrap())]);

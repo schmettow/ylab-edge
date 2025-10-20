@@ -65,22 +65,34 @@ bind_interrupts!(struct Irqs {
 
 #[cortex_m_rt::entry]
 fn init() -> ! {
-    // Second core with I2C sensories
     let p = hal::init(Default::default());
+    // Init I2C shared busses
+    let config = Config::default();
+    static I2C_BUS_0: StaticCell<AsyncI2cBus<I2C0>> = StaticCell::new();
+    let i2c0 = i2c::I2c::new_async(p.I2C0, p.PIN_1, p.PIN_0, Irqs, config);
+    #[allow(unused_variables)]
+    let i2c_bus_0 = I2C_BUS_0.init(embassy_sync::mutex::Mutex::new(i2c0));
+    static I2C_BUS_1: StaticCell<AsyncI2cBus<I2C1>> = StaticCell::new();
+    let i2c1 = i2c::I2c::new_async(p.I2C1, p.PIN_3, p.PIN_2, Irqs, config);
+    #[allow(unused_variables)]
+    let i2c_bus_1 = I2C_BUS_1.init(embassy_sync::mutex::Mutex::new(i2c1));
+
     spawn_core1(p.CORE1, unsafe { &mut CORE1_STACK }, move || {
         let executor1 = EXECUTOR1.init(Executor::new());
         executor1.run(|spawner| {
-            let config = Config::default();
-            //config.frequency = SPEED.into();
-            let i2c0 = i2c::I2c::new_async(p.I2C0, p.PIN_1, p.PIN_0, Irqs, config);
-            static I2C_BUS_0: StaticCell<AsyncI2cBus<I2C0>> = StaticCell::new();
-            let i2c_bus_0 = I2C_BUS_0.init(embassy_sync::mutex::Mutex::new(i2c0));
             spawner
                 .spawn(ylab::ysns::yxz_lsm6::multi_task_0(
                     i2c_bus_0,
                     N_PROBES as u8,
                     HZ.2 / N_PROBES as u64,
                     false,
+                    2,
+                ))
+                .unwrap();
+            spawner
+                .spawn(ylab::ysns::yxz_bmi160::task_0(
+                    i2c_bus_0,
+                    HZ.2 / N_PROBES as u64,
                     2,
                 ))
                 .unwrap();
