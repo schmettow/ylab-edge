@@ -73,12 +73,14 @@ fn init() -> ! {
     let i2c1 = i2c::I2c::new_async(p.I2C1, p.PIN_3, p.PIN_2, Irqs, config);
     #[allow(unused_variables)]
     let i2c_bus_1 = I2C_BUS_1.init(embassy_sync::mutex::Mutex::new(i2c1));
-
+    #[allow(static_mut_refs)]
     spawn_core1(p.CORE1, unsafe { &mut CORE1_STACK }, move || {
         let executor1 = EXECUTOR1.init(Executor::new());
 
         executor1.run(|spawner| {
-            unwrap!(spawner.spawn(ylab::ysns::yirt_max::task_0(i2c_bus_0, 1, 2)));
+            spawner // CO2 (scd4)
+                .spawn(ylab::ysns::yco2::task_0(i2c_bus_0, 2))
+                .unwrap();
             unwrap!(spawner.spawn(ylab::ysns::yxz_lsm6::multi_task_0(
                 i2c_bus_0, 4, 1, false, 2
             )));

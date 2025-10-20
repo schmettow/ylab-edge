@@ -2,8 +2,9 @@ pub use super::*;
 pub use core::fmt::Write;
 
 //pub type Ytf = Sample<[Option<f32>; 8]>; // standard transport format
+#[allow(dead_code)]
 type YtfLine = Vec<u8, 512>;
-
+#[allow(dead_code)]
 trait YtfSend {
     fn msg_csv(&self) -> Result<YtfLine, core::fmt::Error>;
     fn msg_bin(&self) -> Result<YtfLine, core::fmt::Error>;

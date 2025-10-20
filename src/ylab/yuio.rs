@@ -54,7 +54,7 @@ pub mod disp {
     //use hal::i2c;
     //use hal::peripherals::I2C1 as I2C;
     //use i2c::Async as Mode;
-    use ssd1306::{prelude::*, I2CDisplayInterface, Ssd1306, Ssd1306Async};
+    use ssd1306::{prelude::*, I2CDisplayInterface, Ssd1306Async};
     // inter-thread communication
 
     pub type OneLine = String<20>;

@@ -6,7 +6,7 @@
 /// Adc Tcm
 static DEV: (bool, bool, bool, bool) = (true, true, true, false); // Moi, Adc, Motion
 static HZ: (u64, u64, u64, u64) = (0, 53, 149, 0);
-static SPEED: u32 = 100_000;
+//static SPEED: u32 = 100_000;
 const LOG_LEVEL: log::LevelFilter = log::LevelFilter::Info;
 const N_PROBES: u8 = 6;
 use {defmt_rtt as _, panic_probe as _};
@@ -76,25 +76,24 @@ fn init() -> ! {
     let i2c1 = i2c::I2c::new_async(p.I2C1, p.PIN_3, p.PIN_2, Irqs, config);
     #[allow(unused_variables)]
     let i2c_bus_1 = I2C_BUS_1.init(embassy_sync::mutex::Mutex::new(i2c1));
-
+    #[allow(static_mut_refs)]
     spawn_core1(p.CORE1, unsafe { &mut CORE1_STACK }, move || {
         let executor1 = EXECUTOR1.init(Executor::new());
         executor1.run(|spawner| {
-            spawner
+            spawner // multi Lsm6
                 .spawn(ylab::ysns::yxz_lsm6::multi_task_0(
                     i2c_bus_0,
                     N_PROBES as u8,
-                    HZ.2 / N_PROBES as u64,
+                    61 / N_PROBES as u64,
                     false,
                     2,
                 ))
                 .unwrap();
-            spawner
-                .spawn(ylab::ysns::yxz_bmi160::task_0(
-                    i2c_bus_0,
-                    HZ.2 / N_PROBES as u64,
-                    2,
-                ))
+            spawner // BMI160
+                .spawn(ylab::ysns::yxz_bmi160::task_0(i2c_bus_0, 101 as u64, 2))
+                .unwrap();
+            spawner // CO2 (scd4)
+                .spawn(ylab::ysns::yco2::task_0(i2c_bus_0, 2))
                 .unwrap();
         })
     });

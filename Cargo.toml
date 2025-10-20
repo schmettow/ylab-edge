@@ -82,12 +82,15 @@ shared-bus = { version = "0.3.1", features = ["cortex-m"] }
 
 bmi160 = { path = "../async-bmi160-rs" }
 ssd1306 = { version = "0.10.0", features = ["async"] }
-mlx9061x = "0.3.0"
-scd4x = { version = "0.4.1", default-features = false, features = ["scd41"] }
+mlx9061x = { version = "0.3.0", features = ["defmt-03"] }
+scd4x = { version = "0.4.1", default-features = false, features = [
+    "scd41",
+    "embedded-hal-async",
+] }
 max3010x = { path = "../async-max3010x-rs", default-features = false }
 lsm6dsox = { path = "../async-lsm6dsox-rs" }
 xca9548a = { path = "../async-xca9548a-rs" }
-ads1x1x = { path = "../async-ads1x1x-rs" }                                    #"0.3.0"
+ads1x1x = { path = "../async-ads1x1x-rs" } #"0.3.0"
 tlv493d = { path = "../async-tlv493d-rs" }
 #mpu6886 = { path = "../mpu6886", optional = true }
 

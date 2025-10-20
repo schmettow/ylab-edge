@@ -1,7 +1,7 @@
 use crate::ytfk::bsu::SINK;
 pub use crate::*;
 use hal::i2c;
-use i2c::Async as Mode;
+//use i2c::Async as Mode;
 pub use yuio::disp::TEXT as DISP;
 
 pub struct SensorResult<R> {
@@ -279,6 +279,16 @@ pub mod yxz_lsm6 {
     pub type Reading = [Measure; N];
     pub type Sample = crate::Sample<Measure, N>;
 
+    #[embassy_executor::task]
+    pub async fn task_0(i2c_bus: &'static AsyncI2cBus<I2C0>, hz: u64, sensory: u8) {
+        inner_task(i2c_bus, hz, sensory).await;
+    }
+
+    #[embassy_executor::task]
+    pub async fn task_1(i2c_bus: &'static AsyncI2cBus<I2C1>, hz: u64, sensory: u8) {
+        inner_task(i2c_bus, hz, sensory).await;
+    }
+
     async fn inner_task<I>(i2c_bus: &'static AsyncI2cBus<I>, hz: u64, sensory: u8)
     where
         I: hal::i2c::Instance,
@@ -332,12 +342,30 @@ pub mod yxz_lsm6 {
         //let mut sensor = Lsm6::new(i2c, SlaveAddress::Low, time::Delay);
     }
 
+    /// Multi-task
+    ///
     #[embassy_executor::task]
-    pub async fn task_0(i2c_bus: &'static AsyncI2cBus<I2C0>, hz: u64, sensory: u8) {
-        inner_task(i2c_bus, hz, sensory).await;
+    pub async fn multi_task_0(
+        i2c_bus: &'static AsyncI2cBus<I2C0>,
+        n: u8,
+        hz: u64,
+        just_spin: bool,
+        sensory: u8,
+    ) {
+        inner_multi_task(i2c_bus, n, hz, sensory, just_spin).await
     }
 
-    /// Multi-task
+    #[embassy_executor::task]
+    pub async fn multi_task_1(
+        i2c_bus: &'static AsyncI2cBus<I2C1>,
+        n: u8,
+        hz: u64,
+        just_spin: bool,
+        sensory: u8,
+    ) {
+        inner_multi_task(i2c_bus, n, hz, sensory, just_spin).await
+    }
+
     use xca9548a::{SlaveAddr, Xca9548a};
     async fn inner_multi_task<I>(
         i2c_bus: &'static AsyncI2cBus<I>,
@@ -411,17 +439,6 @@ pub mod yxz_lsm6 {
             };
         }
     }
-
-    #[embassy_executor::task]
-    pub async fn multi_task_0(
-        i2c_bus: &'static AsyncI2cBus<I2C0>,
-        n: u8,
-        hz: u64,
-        just_spin: bool,
-        sensory: u8,
-    ) {
-        inner_multi_task(i2c_bus, n, hz, sensory, just_spin).await
-    }
 }
 /// ## BMI Acceleration Sensor
 
@@ -429,7 +446,7 @@ pub mod yxz_bmi160 {
     use super::*;
     #[allow(unused)]
     use bmi160::{AccelerometerPowerMode, Bmi160, GyroscopePowerMode, SensorSelector, SlaveAddr};
-    use lsm6dsox::AsyncI2c;
+    use embassy_rp::i2c::Instance;
 
     /* control channels */
     pub static READY: AtomicBool = AtomicBool::new(false);
@@ -446,7 +463,15 @@ pub mod yxz_bmi160 {
         inner_task::<I2C0>(&i2c_bus, hz, sensory).await
     }
 
-    pub async fn inner_task<I>(i2c_bus: &'static AsyncI2cBus<I2C0>, hz: u64, sensory: u8) {
+    #[embassy_executor::task]
+    pub async fn task_1(i2c_bus: &'static AsyncI2cBus<I2C1>, hz: u64, sensory: u8) {
+        inner_task::<I2C1>(&i2c_bus, hz, sensory).await
+    }
+
+    pub async fn inner_task<I>(i2c_bus: &'static AsyncI2cBus<I>, hz: u64, sensory: u8)
+    where
+        I: Instance,
+    {
         //DISP.signal([None, None, None, Some("BMI160 task".try_into().unwrap())]);
         let i2c = AsyncI2cDevice::new(&i2c_bus);
         let address = SlaveAddr::default();
@@ -502,8 +527,6 @@ pub mod yxz_bmi160 {
 
 pub mod yxz_tlv {
     use super::*;
-    //use hal::peripherals::I2C0 as I2C;
-    //use embassy_embedded_hal::shared_bus::asynch::i2c::I2cDevice;
     #[allow(unused)]
     use tlv493d as tlv;
 
@@ -518,6 +541,11 @@ pub mod yxz_tlv {
 
     #[embassy_executor::task]
     pub async fn task_0(i2c_bus: &'static AsyncI2cBus<I2C0>, hz: u64, sensory: u8) {
+        inner_task(i2c_bus, hz, sensory).await;
+    }
+
+    #[embassy_executor::task]
+    pub async fn task_1(i2c_bus: &'static AsyncI2cBus<I2C1>, hz: u64, sensory: u8) {
         inner_task(i2c_bus, hz, sensory).await;
     }
 
@@ -551,9 +579,9 @@ pub mod yxz_tlv {
     }
 }
 
-pub mod yirt_max {
+/*pub mod yirt_max {
     use super::*;
-    use max3010x::{Led, Max3010x, SampleAveraging};
+    use max3010x::*;
 
     /* control channels */
     pub static READY: AtomicBool = AtomicBool::new(false);
@@ -561,28 +589,39 @@ pub mod yirt_max {
     pub type Reading = [u32; 8];
     pub type Measure = SensorResult<Reading>;
 
-    async fn inner_task<I>(i2c_bus: &'static AsyncI2cBus<I>, hz: u64, sensory: u8)
-    where
-        I: embassy_rp::i2c::Instance,
-    {
-        let i2c = AsyncI2cDevice::new(&i2c_bus);
-        let sensor = Max3010x::new_max30102(i2c);
-        sensor
-            .into_multi_led()
-            .await
-            .unwrap()
-            .wake_up()
-            .await
-            .unwrap();
-    }
-
     #[embassy_executor::task]
     pub async fn task_0(i2c_bus: &'static AsyncI2cBus<I2C0>, hz: u64, sensory: u8) {
         inner_task(i2c_bus, hz, sensory).await
     }
-}
 
-pub mod yirt {
+    async fn inner_task<I>(i2c_bus: &'static AsyncI2cBus<I>, hz: u64, sensory: u8)
+    where
+        I: hal::i2c::Instance,
+    {
+        let i2c = AsyncI2cDevice::new(&i2c_bus);
+        let sensor = Max3010x::new_max30102(i2c);
+        sensor.wake_up().await.unwrap();
+        sensor.into_multi_led().await;
+        sensor.set_pulse_amplitude(Led::All, 255).await.unwrap();
+        sensor.set_sample_averaging(sample_averaging)
+        sensor.set_led_time_slots([
+            TimeSlot::Led1,
+            TimeSlot::Led2,
+            TimeSlot::Led1,
+            TimeSlot::Disabled
+        ]).await.unwrap();
+        sensor.enable_fifo_rollover().await.unwrap();
+
+        let mut data = [0; 2];
+        let mut ticker = Ticker::every(Duration::from_hz(hz));
+        loop {
+            let samples_read = sensor.read_fifo(&mut data).unwrap();
+            ticker.next().await
+        }
+    }
+}*/
+
+/* pub mod yirt {
     // MLX90614
     /* Sensor Generics */
     use super::*;
@@ -630,28 +669,43 @@ pub mod yirt {
             };
         }
     }
-}
+}*/
 
 pub mod yco2 {
     use super::*;
-    use hal::peripherals::I2C0;
-    use scd4x;
+    // use hal::peripherals::I2C0;
+    //use scd4x;
 
     /* control channels */
     pub static READY: AtomicBool = AtomicBool::new(false);
     pub static RECORD: AtomicBool = AtomicBool::new(false);
 
     // Generic result
-    pub type Reading = [f32; 3];
-    pub type Measure = SensorResult<Reading>;
+    const N: usize = 3;
+    pub type Measure = f32;
+    pub type Reading = [Measure; N];
+    pub type Sample = crate::Sample<Measure, N>;
 
     #[embassy_executor::task]
-    pub async fn task(i2c: i2c::I2c<'static, I2C0, Mode>, sensory: u8) {
+    pub async fn task_0(i2c_bus: &'static AsyncI2cBus<I2C0>, sensory: u8) {
+        inner_task(i2c_bus, sensory).await;
+    }
+
+    #[embassy_executor::task]
+    pub async fn task_1(i2c_bus: &'static AsyncI2cBus<I2C1>, sensory: u8) {
+        inner_task(i2c_bus, sensory).await;
+    }
+
+    pub async fn inner_task<I>(i2c_bus: &'static AsyncI2cBus<I>, sensory: u8)
+    where
+        I: i2c::Instance,
+    {
         //DISP.signal([None, None, None, Some("CO2 start".try_into().unwrap())]);
-        let mut sensor = scd4x::Scd4x::new(i2c, time::Delay);
+        let i2c = AsyncI2cDevice::new(&i2c_bus);
+        let mut sensor = scd4x::Scd4xAsync::new(i2c, time::Delay);
         //sensor.wake_up(); <---- This fails
-        sensor.stop_periodic_measurement().unwrap();
-        match sensor.reinit() {
+        sensor.stop_periodic_measurement().await.unwrap();
+        match sensor.reinit().await {
             Ok(_) => {}
             Err(_) => {
                 DISP.signal([None, None, None, Some("Reinit failed".try_into().unwrap())]);
@@ -665,7 +719,7 @@ pub mod yco2 {
         //DISP.signal([None, None, None, Some("CO2 ticking".try_into().unwrap())]);
         loop {
             if RECORD.load(ORD) {
-                match sensor.measure_single_shot_non_blocking() {
+                match sensor.measure_single_shot_non_blocking().await {
                     Err(_) => {
                         DISP.signal([
                             None,
@@ -676,7 +730,7 @@ pub mod yco2 {
                     }
                     Ok(_) => {
                         ticker.next().await;
-                        match sensor.measurement() {
+                        match sensor.measurement().await {
                             Err(_) => {
                                 DISP.signal([
                                     None,
