@@ -1,12 +1,30 @@
-use crate::ytfk::bsu::SINK;
 pub use crate::*;
+use crate::{ysns::yxz_tlv::Measure, ytfk::bsu::SINK};
 use hal::i2c;
 //use i2c::Async as Mode;
 pub use yuio::disp::TEXT as DISP;
 
-pub struct SensorResult<R> {
+/*pub struct SensorResult<R> {
     pub time: Instant,
     pub reading: R,
+}*/
+
+#[derive(Debug)]
+pub enum YsenseErr {
+    Init,
+    Read,
+    Task,
+}
+
+pub trait Ysense<const N: usize> {
+    type Measure;
+    async fn init(&mut self) -> Result<(), YsenseErr>;
+    async fn read(&self) -> Result<[Measure; N], YsenseErr>;
+}
+
+pub struct Sensor<T, const N: usize> {
+    sensor: T,
+    pub id: u8,
 }
 
 pub mod moi {
@@ -289,57 +307,92 @@ pub mod yxz_lsm6 {
         inner_task(i2c_bus, hz, sensory).await;
     }
 
+    pub struct Sensor<I2C>
+    where
+        I2C: embedded_hal_async::i2c::I2c,
+    {
+        pub sensor: Lsm6<I2C>,
+        pub id: u8,
+        pub hz: u64,
+    }
+
+    impl<I> Sensor<I>
+    where
+        I: embedded_hal_async::i2c::I2c,
+    {
+        pub fn new(i2c: I, id: u8, hz: u64) -> Self {
+            Self {
+                sensor: Lsm6::new(i2c, SlaveAddress::Low).unwrap(),
+                id: id,
+                hz: hz,
+            }
+        }
+
+        pub async fn set_hz(&mut self, hz: u64) {
+            self.hz = hz;
+        }
+
+        pub async fn init(&mut self) -> Result<(), YsenseErr> {
+            self.sensor.setup(Delay).await.unwrap();
+            self.sensor
+                .set_accel_sample_rate(DataRate::Freq1660Hz)
+                .await
+                .unwrap();
+            self.sensor
+                .set_accel_scale(AccelerometerScale::Accel2g)
+                .await
+                .unwrap();
+            self.sensor
+                .set_gyro_sample_rate(DataRate::Freq1660Hz)
+                .await
+                .unwrap();
+            self.sensor
+                .set_gyro_scale(GyroscopeScale::Dps250)
+                .await
+                .unwrap();
+            log::debug!("Yxz set");
+            Ok(())
+        }
+
+        pub async fn read(&mut self) -> Result<Reading, YsenseErr> {
+            log::debug!("Yxz get");
+            let accel = self.sensor.accel_norm().await.unwrap();
+            let gyro = self.sensor.angular_rate().await.unwrap();
+            let reading = [
+                accel.x.as_meters_per_second_per_second() as f32,
+                accel.y.as_meters_per_second_per_second() as f32,
+                accel.z.as_meters_per_second_per_second() as f32,
+                gyro.x.as_hertz() as f32,
+                gyro.y.as_hertz() as f32,
+                gyro.z.as_hertz() as f32,
+            ];
+            Ok(reading)
+        }
+
+        pub async fn sample(&mut self) -> Result<Sample, ()> {
+            let reading = self.read().await;
+            match reading {
+                Ok(reading) => Ok(Sample {
+                    sensory: self.id,
+                    time: Instant::now(),
+                    read: reading,
+                }),
+                Err(_) => Err(()),
+            }
+        }
+    }
+
     async fn inner_task<I>(i2c_bus: &'static AsyncI2cBus<I>, hz: u64, sensory: u8)
     where
         I: hal::i2c::Instance,
     {
         let i2c = AsyncI2cDevice::new(&i2c_bus);
-        let mut sensor = Lsm6::new(i2c, SlaveAddress::Low).unwrap();
-        sensor.setup(Delay).await.unwrap();
-        sensor
-            .set_accel_sample_rate(DataRate::Freq1660Hz)
-            .await
-            .unwrap();
-        sensor
-            .set_accel_scale(AccelerometerScale::Accel2g)
-            .await
-            .unwrap();
-        sensor
-            .set_gyro_sample_rate(DataRate::Freq1660Hz)
-            .await
-            .unwrap();
-        sensor.set_gyro_scale(GyroscopeScale::Dps250).await.unwrap();
-        log::debug!("Yxz set");
+        let mut sensor = Sensor::new(i2c, sensory, hz);
+        sensor.init().await.unwrap();
         let mut ticker = Ticker::every(Duration::from_hz(hz));
-        //let mut reading: Reading;
-        //let mut result: SensorResult<Reading>;
-        READY.store(true, ORD);
-
-        loop {
-            if RECORD.load(ORD) {
-                log::debug!("Yxz get");
-                let accel = sensor.accel_norm().await.unwrap();
-                let gyro = sensor.angular_rate().await.unwrap();
-                let reading = [
-                    accel.x.as_meters_per_second_per_second() as f32,
-                    accel.y.as_meters_per_second_per_second() as f32,
-                    accel.z.as_meters_per_second_per_second() as f32,
-                    gyro.x.as_hertz() as f32,
-                    gyro.y.as_hertz() as f32,
-                    gyro.z.as_hertz() as f32,
-                ];
-
-                let sample = Sample {
-                    sensory: sensory,
-                    time: Instant::now(),
-                    read: reading,
-                };
-                SINK.send(sample.into()).await;
-                log::debug!("Yxz read");
-                ticker.next().await;
-            };
-        }
-        //let mut sensor = Lsm6::new(i2c, SlaveAddress::Low, time::Delay);
+        SINK.send(sensor.sample().await.unwrap().into()).await;
+        log::debug!("Yxz read");
+        ticker.next().await;
     }
 
     /// Multi-task
@@ -380,63 +433,31 @@ pub mod yxz_lsm6 {
         let tca = Xca9548a::new(i2c_tca, SlaveAddr::default());
         let hub = tca.split();
 
-        let sen_0 = Lsm6::new(hub.i2c0, SlaveAddress::Low).unwrap();
-        let sen_1 = Lsm6::new(hub.i2c1, SlaveAddress::Low).unwrap();
-        let sen_2 = Lsm6::new(hub.i2c2, SlaveAddress::Low).unwrap();
-        let sen_3 = Lsm6::new(hub.i2c3, SlaveAddress::Low).unwrap();
-        let sen_4 = Lsm6::new(hub.i2c4, SlaveAddress::Low).unwrap();
-        let sen_5 = Lsm6::new(hub.i2c5, SlaveAddress::Low).unwrap();
+        let sen_0 = Sensor::new(hub.i2c0, sensory, hz);
+        let sen_1 = Sensor::new(hub.i2c1, sensory + 1, hz);
+        let sen_2 = Sensor::new(hub.i2c2, sensory + 2, hz);
+        let sen_3 = Sensor::new(hub.i2c3, sensory + 3, hz);
+        let sen_4 = Sensor::new(hub.i2c4, sensory + 4, hz);
+        let sen_5 = Sensor::new(hub.i2c5, sensory + 5, hz);
         //let sen_6 = Lsm6::new(hub.i2c6, SlaveAddress::Low, time::Delay);
         //let sen_7 = Lsm6::new(hub.i2c7, SlaveAddress::Low, time::Delay);
         let mut sensors = [sen_0, sen_1, sen_2, sen_3, sen_4, sen_5]; // sen_6, sen_7];
-                                                                      //let mut sensory = [Some(sen_0), Some(sen_1), Some(sen_2), Some(sen_3), Some(sen_4), Some(sen_5), Some(sen_6), Some(sen_7)];
-        let data_rate = DataRate::Freq416Hz;
         let mut sensor_active = [false, false, false, false, false, false];
         for (s, sens) in sensors.as_mut().into_iter().enumerate() {
             if s >= n as usize {
                 continue;
             }
-            if let (Ok(_), Ok(_)) = (
-                sens.set_accel_sample_rate(data_rate).await,
-                sens.set_gyro_sample_rate(data_rate).await,
-            ) {
+            if let Ok(_) = sens.init().await {
                 sensor_active[s] = true;
             };
         }
-        //DISP.signal([None, None, None, Some("LSM6x3".try_into().unwrap())]);
-        let mut ticker = Ticker::every(Duration::from_hz(hz));
-        //let mut reading: Reading;
-        //let mut result: Sample;
-        READY.store(true, ORD);
-        loop {
-            if RECORD.load(ORD) {
-                for (s, sensor) in sensors.as_mut().into_iter().enumerate() {
-                    if s >= n as usize {
-                        continue;
-                    }
-                    if let (Ok(accel), Ok(gyro)) =
-                        (sensor.accel_norm().await, sensor.angular_rate().await)
-                    {
-                        let reading = [
-                            accel.x.as_meters_per_second_per_second() as f32,
-                            accel.y.as_meters_per_second_per_second() as f32,
-                            accel.z.as_meters_per_second_per_second() as f32,
-                            gyro.x.as_hertz() as f32,
-                            gyro.y.as_hertz() as f32,
-                            gyro.z.as_hertz() as f32,
-                        ];
-                        let sample = Sample {
-                            sensory: (s as u8 + sensory),
-                            time: Instant::now(),
-                            read: reading,
-                        };
-                        SINK.send(sample.into()).await;
-                    }
-                }
-            };
-            if !just_spin {
-                ticker.next().await;
-            };
+        for (s, sensor) in sensors.as_mut().into_iter().enumerate() {
+            if s >= n as usize {
+                continue;
+            }
+            if let Ok(s) = sensor.sample().await {
+                SINK.send(s.into()).await;
+            }
         }
     }
 }
@@ -455,7 +476,6 @@ pub mod yxz_bmi160 {
     const N: usize = 6;
     pub type Measure = f32;
     pub type Reading = [Measure; N];
-    /// <--- 4 channel is total accel for now
     pub type Sample = crate::Sample<Measure, N>;
 
     #[embassy_executor::task]
@@ -481,17 +501,11 @@ pub mod yxz_bmi160 {
             .set_accel_power_mode(AccelerometerPowerMode::Normal)
             .await
             .unwrap();
-        //DISP.signal([None, Some("BMI160 accel".try_into().unwrap()), None, None]);
         sensor
             .set_gyro_power_mode(GyroscopePowerMode::Normal)
             .await
             .unwrap();
-        //DISP.signal([None, Some("BMI160 gyro".try_into().unwrap()), None, None]);
-        //DISP.signal([None, None, None, Some("BMI160 set".try_into().unwrap())]);
         let mut ticker = Ticker::every(Duration::from_hz(hz));
-        //DISP.signal([None, None, None, Some("BMI160 ticks".try_into().unwrap())]);
-        //let mut reading: Reading;
-        //let mut result: Sample;
         READY.store(true, ORD);
         loop {
             ticker.next().await;
@@ -521,6 +535,71 @@ pub mod yxz_bmi160 {
             };
         }
     }
+
+    /*pub struct Sensor<I2C>
+    where
+        I2C: embedded_hal_async::i2c::I2c,
+    {
+        pub sensor: Bmi160<I2C>,
+        pub id: u8,
+        pub hz: u64,
+    }
+
+    impl<I> Sensor<I>
+    where
+        I: embedded_hal_async::i2c::I2c,
+    {
+        pub fn new(i2c: I, id: u8, hz: u64) -> Self
+        where
+            I: embedded_hal_async::i2c::I2c,
+        {
+            Self {
+                sensor: Bmi160::new_with_i2c(i2c, address),
+                id: id,
+                hz: hz,
+            }
+        }
+
+        pub async fn init(&mut self) -> Result<(), YsenseErr> {
+            self.sensor
+                .set_accel_power_mode(AccelerometerPowerMode::Normal)
+                .await
+                .unwrap();
+            //DISP.signal([None, Some("BMI160 accel".try_into().unwrap()), None, None]);
+            self.sensor
+                .set_gyro_power_mode(GyroscopePowerMode::Normal)
+                .await
+                .unwrap();
+            Ok(())
+        }
+
+        pub async fn read(&mut self) -> Result<Reading, YsenseErr> {
+            log::debug!("Yxz get");
+            let accel = self.sensor.accel_norm().await.unwrap();
+            let gyro = self.sensor.angular_rate().await.unwrap();
+            let reading = [
+                accel.x.as_meters_per_second_per_second() as f32,
+                accel.y.as_meters_per_second_per_second() as f32,
+                accel.z.as_meters_per_second_per_second() as f32,
+                gyro.x.as_hertz() as f32,
+                gyro.y.as_hertz() as f32,
+                gyro.z.as_hertz() as f32,
+            ];
+            Ok(reading)
+        }
+
+        pub async fn sample(&mut self) -> Result<Sample, ()> {
+            let reading = self.read().await;
+            match reading {
+                Ok(reading) => Ok(Sample {
+                    sensory: self.id,
+                    time: Instant::now(),
+                    read: reading,
+                }),
+                Err(_) => Err(()),
+            }
+        }
+    }*/
 }
 
 /// ## TLV Hall effect
