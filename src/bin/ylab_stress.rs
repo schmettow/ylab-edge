@@ -76,14 +76,10 @@ fn init() -> ! {
     #[allow(static_mut_refs)]
     spawn_core1(p.CORE1, unsafe { &mut CORE1_STACK }, move || {
         let executor1 = EXECUTOR1.init(Executor::new());
-
         executor1.run(|spawner| {
             spawner // CO2 (scd4)
                 .spawn(ylab::ysns::yco2::task_0(i2c_bus_0, 2))
                 .unwrap();
-            unwrap!(spawner.spawn(ylab::ysns::yxz_lsm6::multi_task_0(
-                i2c_bus_0, 4, 1, false, 2
-            )));
             unwrap!(spawner.spawn(ylab::ysns::ads1115::task_1(i2c_bus_1, 4, 3)));
             unwrap!(spawner.spawn(yuio::disp::task_1(i2c_bus_1)));
         })
@@ -93,34 +89,29 @@ fn init() -> ! {
     executor0.run(|spawner| {
         // task for controlling the led
         unwrap!(spawner.spawn(yled::task(p.PIN_25.into())));
-        // task for receiving text and put it on an OLED 1306
-        // task for listening to button presses.
+        // listening to button presses.
         unwrap!(spawner.spawn(ybtn::task(p.PIN_20.into())));
-        // task listening for data packeges to send up the line (reverse USB ;)
+        //  listening for data packeges to send up the line (reverse USB ;)
         unwrap!(spawner.spawn(ybsu::logger_task(p.USB, log::LevelFilter::Info)));
         unwrap!(spawner.spawn(ybsu::task()));
-        // task to control sensors, storage and ui
+        // control sensors, storage and ui
         unwrap!(spawner.spawn(control_task()));
-        if DEV.0 {
-            if DEV.0 {
-                spawner
-                    .spawn(ylab::ysns::moi::task_2(p.PIN_21, p.PIN_22, 0))
-                    .unwrap()
-            }
-            if DEV.1 {
-                let adc0: adc::Adc<'_, Async> = adc::Adc::new(p.ADC, Irqs, adc::Config::default());
-                spawner
-                    .spawn(yadc::task(
-                        adc0,
-                        p.PIN_26.into(),
-                        p.PIN_27.into(),
-                        p.PIN_28.into(),
-                        HZ.1,
-                        1,
-                    ))
-                    .unwrap();
-            };
-        };
+        // collect moi events
+        spawner
+            .spawn(ylab::ysns::moi::task_2(p.PIN_21, p.PIN_22, 0))
+            .unwrap();
+        // ADC task
+        let adc0: adc::Adc<'_, Async> = adc::Adc::new(p.ADC, Irqs, adc::Config::default());
+        spawner
+            .spawn(yadc::task(
+                adc0,
+                p.PIN_26.into(),
+                p.PIN_27.into(),
+                p.PIN_28.into(),
+                HZ.1,
+                1,
+            ))
+            .unwrap();
     });
 }
 
