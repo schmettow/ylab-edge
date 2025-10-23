@@ -1,87 +1,17 @@
 #![no_std]
 
 pub use embassy_rp as hal;
-pub use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex as RawMutex;
-pub use embassy_sync::channel::Channel;
-pub use embassy_sync::mutex::Mutex;
-pub use embassy_sync::signal::Signal;
-pub use embassy_time as time;
-use hal::gpio::AnyPin;
-use hal::Peri;
-pub use heapless::{String, Vec};
-pub use time::{Delay, Duration, Instant, Ticker};
-
-pub use core::sync::atomic::AtomicBool;
-pub use core::sync::atomic::Ordering;
-pub static ORD: Ordering = Ordering::SeqCst;
+pub use hal::gpio::AnyPin;
+pub use hal::Peri;
+pub use ylab_lib::yuii;
+pub use ylab_lib::*;
 
 pub mod ysns; // Ylab sensors
 pub mod ytfk;
-pub mod yuii; // YLab UI Input
+//pub mod yuii; // YLab UI Input
 pub mod yuio; // YLab UI Output // YLab transfer formats & kodices
-
-#[derive(Debug, Eq, PartialEq, Clone)]
-pub struct Sample<M, const N: usize>
-where
-    M: Into<YtfType>,
-{
-    pub sensory: u8,
-    pub time: Instant,
-    pub read: [M; N],
-}
-
-pub const YTF_LEN: usize = 8;
-pub type YtfType = f64;
-pub type YtfRead = [Option<YtfType>; YTF_LEN];
-
-pub struct Ytf {
-    pub sensory: u8,
-    pub time: Instant,
-    pub read: YtfRead,
-}
-
-impl<M: Into<YtfType>, const N: usize> Into<Ytf> for Sample<M, N> {
-    fn into(self) -> Ytf {
-        let mut out: YtfRead = [None; YTF_LEN];
-        for (i, r) in self.read.into_iter().enumerate() {
-            out[i] = Some(r.into());
-        }
-        Ytf {
-            sensory: self.sensory,
-            time: self.time,
-            read: out,
-        }
-    }
-}
-
-impl core::fmt::Display for Ytf {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{}, {}", self.time.as_micros(), self.sensory).unwrap();
-        for r in self.read {
-            match r {
-                Some(v) => {
-                    write!(f, ",{:.3}", v).unwrap();
-                }
-                None => {
-                    write!(f, ",").unwrap();
-                }
-            }
-        }
-        write!(f, "")
-    }
-}
 
 pub use hal::peripherals::I2C0;
 pub use hal::peripherals::I2C1;
-pub type AsyncI2cBus<I> =
-    embassy_sync::mutex::Mutex<NoopRawMutex, hal::i2c::I2c<'static, I, hal::i2c::Async>>;
-pub type BlockI2cBus<I> = embassy_sync::mutex::Mutex<
-    NoopRawMutex,
-    core::cell::RefCell<hal::i2c::I2c<'static, I, hal::i2c::Blocking>>,
->;
-pub type AsyncI2cDevice<'a, M, BUS> =
-    embassy_embedded_hal::shared_bus::asynch::i2c::I2cDevice<'a, M, BUS>;
-pub type BlockI2cDevice<'a, M, BUS> =
-    embassy_embedded_hal::shared_bus::blocking::i2c::I2cDevice<'a, M, BUS>;
-pub use embassy_sync::blocking_mutex::raw::NoopRawMutex;
-pub use static_cell::StaticCell;
+pub type AsyncI2cBus<D> =
+    ylab_lib::ybus::GenAsyncI2cBus<hal::i2c::I2c<'static, D, hal::i2c::Async>>;

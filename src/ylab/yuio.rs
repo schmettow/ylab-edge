@@ -1,12 +1,12 @@
-pub use crate::*;
+pub use super::*;
 
 pub mod led {
     // LED control
     use super::*;
     use embassy_rp::gpio::{AnyPin, Level, Output};
-    use embassy_time::{Duration, Timer};
+    use ylab_lib::{Duration, Timer};
     //use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-    use embassy_sync::signal::Signal;
+    use ylab_lib::Signal;
     pub enum State {
         Vibrate,
         Blink,
@@ -51,6 +51,7 @@ pub mod led {
 
 pub mod disp {
     use super::*;
+    use ylab_lib::ybus::AsyncI2cDevice;
     //use hal::i2c;
     //use hal::peripherals::I2C1 as I2C;
     //use i2c::Async as Mode;

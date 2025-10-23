@@ -1,6 +1,8 @@
+use crate::ytfk::bsu::SINK;
 pub use crate::*;
-use crate::{ysns::yxz_tlv::Measure, ytfk::bsu::SINK};
 use hal::i2c;
+pub use ylab_lib::ybus::AsyncI2cDevice;
+pub use ylab_lib::ydata::Sample;
 //use i2c::Async as Mode;
 pub use yuio::disp::TEXT as DISP;
 
@@ -16,14 +18,14 @@ pub enum YsenseErr {
     Task,
 }
 
-pub trait Ysense<const N: usize> {
+/*pub trait Ysense<const N: usize> {
     type Measure;
     async fn init(&mut self) -> Result<(), YsenseErr>;
     async fn read(&self) -> Result<[Measure; N], YsenseErr>;
-}
+}*/
 
 pub struct Sensor<T, const N: usize> {
-    sensor: T,
+    _sensor: T,
     pub id: u8,
 }
 
@@ -34,7 +36,7 @@ pub mod moi {
 
     pub type Measure = bool;
     pub type Reading<const N: usize> = [Measure; N];
-    pub type Sample<const N: usize> = crate::Sample<Measure, N>;
+    pub type Sample<const N: usize> = ydata::Sample<Measure, N>;
 
     /* control channels */
     pub static READY: AtomicBool = AtomicBool::new(false);
@@ -237,7 +239,7 @@ pub mod ads1115 {
     pub const N: usize = 4;
     pub type Measure = f32;
     pub type Reading = [Measure; N];
-    pub type Sample = crate::Sample<Measure, N>;
+    pub type Sample = ydata::Sample<Measure, N>;
     /* control channels */
     pub static READY: AtomicBool = AtomicBool::new(false);
     pub static RECORD: AtomicBool = AtomicBool::new(false);
@@ -295,7 +297,7 @@ pub mod yxz_lsm6 {
     const N: usize = 6;
     pub type Measure = f32;
     pub type Reading = [Measure; N];
-    pub type Sample = crate::Sample<Measure, N>;
+    pub type Sample = ydata::Sample<Measure, N>;
 
     #[embassy_executor::task]
     pub async fn task_0(i2c_bus: &'static AsyncI2cBus<I2C0>, hz: u64, sensory: u8) {
@@ -425,7 +427,7 @@ pub mod yxz_lsm6 {
         n: u8,
         hz: u64,
         sensory: u8,
-        just_spin: bool,
+        _just_spin: bool,
     ) where
         I: hal::i2c::Instance,
     {
@@ -476,7 +478,7 @@ pub mod yxz_bmi160 {
     const N: usize = 6;
     pub type Measure = f32;
     pub type Reading = [Measure; N];
-    pub type Sample = crate::Sample<Measure, N>;
+    pub type Sample = ydata::Sample<Measure, N>;
 
     #[embassy_executor::task]
     pub async fn task_0(i2c_bus: &'static AsyncI2cBus<I2C0>, hz: u64, sensory: u8) {
@@ -616,7 +618,7 @@ pub mod yxz_tlv {
     const N: usize = 4;
     pub type Measure = i16;
     pub type Reading = [Measure; N];
-    pub type Sample = crate::Sample<Measure, N>;
+    pub type Sample = ydata::Sample<Measure, N>;
 
     #[embassy_executor::task]
     pub async fn task_0(i2c_bus: &'static AsyncI2cBus<I2C0>, hz: u64, sensory: u8) {
@@ -763,7 +765,7 @@ pub mod yco2 {
     const N: usize = 3;
     pub type Measure = f32;
     pub type Reading = [Measure; N];
-    pub type Sample = crate::Sample<Measure, N>;
+    pub type Sample = ydata::Sample<Measure, N>;
 
     #[embassy_executor::task]
     pub async fn task_0(i2c_bus: &'static AsyncI2cBus<I2C0>, sensory: u8) {

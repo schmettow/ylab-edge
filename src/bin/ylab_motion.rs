@@ -13,6 +13,7 @@ use {defmt_rtt as _, panic_probe as _};
 
 use defmt::*;
 use embassy_executor::Executor;
+use embedded_hal::digital::InputPin;
 use hal::adc::Async;
 #[allow(unused_imports)]
 use hal::gpio::Pin;
@@ -22,7 +23,7 @@ use hal::multicore::{spawn_core1, Stack};
 /// two heaps
 static mut CORE1_STACK: Stack<4096> = Stack::new();
 //use log::LevelFilter;
-use static_cell::StaticCell;
+
 static EXECUTOR0: StaticCell<Executor> = StaticCell::new();
 static EXECUTOR1: StaticCell<Executor> = StaticCell::new();
 
@@ -38,6 +39,7 @@ use ylab::yuio::led as yled;
 // use embassy_time::{Duration, Ticker};
 /// + peripherals
 use ylab::*;
+use ylab_lib::{Mutex, StaticCell};
 
 #[derive(
     Debug, // used as fmt
@@ -71,11 +73,11 @@ fn init() -> ! {
     static I2C_BUS_0: StaticCell<AsyncI2cBus<I2C0>> = StaticCell::new();
     let i2c0 = i2c::I2c::new_async(p.I2C0, p.PIN_1, p.PIN_0, Irqs, config);
     #[allow(unused_variables)]
-    let i2c_bus_0 = I2C_BUS_0.init(embassy_sync::mutex::Mutex::new(i2c0));
+    let i2c_bus_0 = I2C_BUS_0.init(Mutex::new(i2c0));
     static I2C_BUS_1: StaticCell<AsyncI2cBus<I2C1>> = StaticCell::new();
     let i2c1 = i2c::I2c::new_async(p.I2C1, p.PIN_3, p.PIN_2, Irqs, config);
     #[allow(unused_variables)]
-    let i2c_bus_1 = I2C_BUS_1.init(embassy_sync::mutex::Mutex::new(i2c1));
+    let i2c_bus_1 = I2C_BUS_1.init(Mutex::new(i2c1));
     #[allow(static_mut_refs)]
     spawn_core1(p.CORE1, unsafe { &mut CORE1_STACK }, move || {
         let executor1 = EXECUTOR1.init(Executor::new());
@@ -123,13 +125,24 @@ fn init() -> ! {
         // task for controlling the led
         unwrap!(spawner.spawn(yled::task(p.PIN_25.into())));
         // task for listening to button presses.
-        unwrap!(spawner.spawn(ybtn::task(p.PIN_20.into())));
+        unwrap!(spawner.spawn(ybtn_20(p.PIN_20.into())));
         // task listening for data packeges to send up the line (reverse USB ;)
         unwrap!(spawner.spawn(ybsu::logger_task(p.USB, LOG_LEVEL)));
         unwrap!(spawner.spawn(ybsu::task()));
         // task to control sensors, storage and ui
         unwrap!(spawner.spawn(control_task()));
     });
+}
+
+//use embassy_rp::peripherals::PIN_20;
+use crate::hal::gpio::Input;
+use crate::hal::gpio::Pull;
+use embassy_rp::peripherals::PIN_20;
+
+#[embassy_executor::task]
+async fn ybtn_20(pin: Peri<'static, PIN_20>) {
+    let pin = Input::new(pin, Pull::Up);
+    yuii::btn::inner_task(pin).await;
 }
 
 #[embassy_executor::task]

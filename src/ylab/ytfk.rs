@@ -1,5 +1,6 @@
 pub use super::*;
 pub use core::fmt::Write;
+use ylab_lib::ydata::Ytf;
 
 //pub type Ytf = Sample<[Option<f32>; 8]>; // standard transport format
 #[allow(dead_code)]
