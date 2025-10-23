@@ -15,9 +15,10 @@ use {defmt_rtt as _, panic_probe as _};
 /// The following code initializes the second stack, plus
 /// two heaps
 static mut CORE1_STACK: Stack<4096> = Stack::new();
-use static_cell::StaticCell;
 static EXECUTOR0: StaticCell<Executor> = StaticCell::new();
 static EXECUTOR1: StaticCell<Executor> = StaticCell::new();
+
+use ylab_lib::{Mutex, StaticCell};
 
 use ydsp::TEXT as DISP;
 use ylab::*;
@@ -68,11 +69,11 @@ fn init() -> ! {
     static I2C_BUS_0: StaticCell<AsyncI2cBus<I2C0>> = StaticCell::new();
     let i2c0 = i2c::I2c::new_async(p.I2C0, p.PIN_1, p.PIN_0, Irqs, config);
     #[allow(unused_variables)]
-    let i2c_bus_0 = I2C_BUS_0.init(embassy_sync::mutex::Mutex::new(i2c0));
+    let i2c_bus_0 = I2C_BUS_0.init(Mutex::new(i2c0));
     static I2C_BUS_1: StaticCell<AsyncI2cBus<I2C1>> = StaticCell::new();
     let i2c1 = i2c::I2c::new_async(p.I2C1, p.PIN_3, p.PIN_2, Irqs, config);
     #[allow(unused_variables)]
-    let i2c_bus_1 = I2C_BUS_1.init(embassy_sync::mutex::Mutex::new(i2c1));
+    let i2c_bus_1 = I2C_BUS_1.init(Mutex::new(i2c1));
     #[allow(static_mut_refs)]
     spawn_core1(p.CORE1, unsafe { &mut CORE1_STACK }, move || {
         let executor1 = EXECUTOR1.init(Executor::new());
@@ -90,7 +91,7 @@ fn init() -> ! {
         // task for controlling the led
         unwrap!(spawner.spawn(yled::task(p.PIN_25.into())));
         // listening to button presses.
-        unwrap!(spawner.spawn(ybtn::task(p.PIN_20.into())));
+        unwrap!(spawner.spawn(ybtn_20(p.PIN_20.into())));
         //  listening for data packeges to send up the line (reverse USB ;)
         unwrap!(spawner.spawn(ybsu::logger_task(p.USB, log::LevelFilter::Info)));
         unwrap!(spawner.spawn(ybsu::task()));
@@ -113,6 +114,16 @@ fn init() -> ! {
             ))
             .unwrap();
     });
+}
+
+use crate::hal::gpio::Input;
+use crate::hal::gpio::Pull;
+use embassy_rp::peripherals::PIN_20;
+
+#[embassy_executor::task]
+async fn ybtn_20(pin: Peri<'static, PIN_20>) {
+    let pin = Input::new(pin, Pull::Up);
+    yuii::btn::inner_task(pin).await;
 }
 
 #[embassy_executor::task]

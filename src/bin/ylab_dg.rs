@@ -41,7 +41,6 @@ use hal::multicore::{spawn_core1, Stack};
 /// The following code initializes the second stack, plus
 /// two heaps
 static mut CORE1_STACK: Stack<4096> = Stack::new();
-use static_cell::StaticCell;
 static EXECUTOR0: StaticCell<Executor> = StaticCell::new();
 static EXECUTOR1: StaticCell<Executor> = StaticCell::new();
 
@@ -72,6 +71,7 @@ use ylab::yuii::btn as ybtn;
 /// + YUI input (LED) and output (button)
 use ylab::yuio::led as yled;
 use ylab::*;
+use ylab_lib::{Mutex, StaticCell};
 
 /// ## Storage task
 ///
@@ -167,13 +167,23 @@ fn init() -> ! {
         // task for controlling the led
         unwrap!(spawner.spawn(yled::task(p.PIN_25.into())));
         // task for listening to button presses.
-        unwrap!(spawner.spawn(ybtn::task(p.PIN_20.into())));
+        unwrap!(spawner.spawn(ybtn_20(p.PIN_20.into())));
         // task listening for data packeges to send up the line (reverse USB ;)
         unwrap!(spawner.spawn(ybsu::logger_task(p.USB, log::LevelFilter::Info)));
         unwrap!(spawner.spawn(ybsu::task()));
         // task to control sensors, storage and ui
         unwrap!(spawner.spawn(control_task()))
     });
+}
+
+use crate::hal::gpio::Input;
+use crate::hal::gpio::Pull;
+use embassy_rp::peripherals::PIN_20;
+
+#[embassy_executor::task]
+async fn ybtn_20(pin: Peri<'static, PIN_20>) {
+    let pin = Input::new(pin, Pull::Up);
+    yuii::btn::inner_task(pin).await;
 }
 
 /// ## Control task
