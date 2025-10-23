@@ -1,0 +1,67 @@
+[workspace]
+resolver = "2"
+members = [
+    "ylab-lib",
+    "ylab-rp2040",
+    "ylab-sensors/async-bmi160-rs",
+    "ylab-sensors/async-max3010x-rs",
+    "ylab-sensors/async-lsm6dsox-rs",
+    "ylab-sensors/async-ssd1306",
+    "ylab-sensors/async-xca9548a-rs",
+    "ylab-sensors/async-ads1x1x-rs",
+    "ylab-sensors/async-tlv493d-rs",
+]
+
+[patch.crates-io]
+
+# cargo build/run
+[profile.dev]
+codegen-units = 1
+debug = 2
+debug-assertions = true
+incremental = false
+opt-level = 's'
+overflow-checks = true
+
+# cargo build/run --release
+[profile.release]
+codegen-units = 1
+debug = 2
+debug-assertions = false
+incremental = false
+lto = 'fat'
+opt-level = 's'
+overflow-checks = false
+
+# do not optimize proc-macro crates = faster builds from scratch
+[profile.dev.build-override]
+codegen-units = 8
+debug = false
+debug-assertions = false
+opt-level = 0
+overflow-checks = false
+
+[profile.release.build-override]
+codegen-units = 8
+debug = false
+debug-assertions = false
+opt-level = 0
+overflow-checks = false
+
+# cargo test
+[profile.test]
+codegen-units = 1
+debug = 2
+debug-assertions = true
+incremental = false
+opt-level = 's'
+overflow-checks = true
+
+# cargo test --release
+[profile.bench]
+codegen-units = 1
+debug = 2
+debug-assertions = false
+incremental = false
+lto = 'fat'
+opt-level = 's'
