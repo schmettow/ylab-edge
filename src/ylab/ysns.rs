@@ -1,6 +1,7 @@
 use crate::ytfk::bsu::SINK;
 pub use crate::*;
-use hal::i2c;
+//pub use hal::i2c;
+pub use hal::i2c::Instance as I2cInstance;
 pub use ylab_lib::ybus::AsyncI2cDevice;
 pub use ylab_lib::ydata::Sample;
 //use i2c::Async as Mode;
@@ -168,66 +169,6 @@ pub mod adc {
     }
 }
 
-///# ADS1015 on I2C1
-/*pub mod ads1015 {
-    use super::*;
-    use ads::DataRate12Bit as DataRate;
-    /// ## Sensor Generics
-    use ads1x1x as ads;
-    const N: usize = 4;
-    pub type Measure = f32;
-    pub type Reading = [Measure; N];
-    pub type Sample = crate::Sample<Measure, N>;
-    /* control channels */
-    pub use core::sync::atomic::Ordering;
-    pub static READY: core::sync::atomic::AtomicBool = AtomicBool::new(false);
-    pub static RECORD: AtomicBool = AtomicBool::new(false);
-
-    async fn inner_task<I>(i2c_bus: &'static AsyncI2cBus<I>, hz: u64, sensory: u8)
-    where
-        I: hal::i2c::Instance,
-    {
-        let i2c = AsyncI2cDevice::new(&i2c_bus);
-        let address = ads::TargetAddr::default();
-        let mut ads = ads::Ads1x1x::new_ads1015(i2c, address);
-    }
-
-    #[embassy_executor::task]
-    pub async fn task(i2c: i2c::I2c<'static, I2C, i2c::Async>, hz: u64) {
-        let address = SlaveAddr::default();
-        let mut ads = Ads1x1x::new_ads1015(i2c, address);
-        // ads.set_data_rate(DataRate16Bit::Sps860).unwrap();
-        ads.set_data_rate(DataRate::Sps3300).unwrap();
-        let mut ticker = Ticker::every(Duration::from_hz(hz));
-        let mut reading: Reading;
-        let mut result: SensorResult<Reading>;
-        READY.store(true, ORD);
-        loop {
-            ticker.next().await;
-            if RECORD.load(ORD) {
-                reading = [0; 4
-                    /*block!(ads.read(&mut channel::SingleA0)).unwrap(),
-                    block!(ads.read(&mut channel::SingleA1)).unwrap(),
-                    block!(ads.read(&mut channel::SingleA2)).unwrap(),
-                    block!(ads.read(&mut channel::SingleA3)).unwrap(),*/
-                    ];
-                result = SensorResult {
-                    time: Instant::now(),
-                    reading: reading,
-                };
-                log::info!(
-                    "{},2,{},{},{},{},,,,",
-                    result.time.as_micros(),
-                    result.reading[0],
-                    result.reading[1],
-                    result.reading[2],
-                    result.reading[3],
-                );
-            };
-        }
-    }
-}*/
-
 /* ADS1115 Sensor I2C1 */
 pub mod ads1115 {
     use super::*;
@@ -256,7 +197,7 @@ pub mod ads1115 {
 
     async fn inner_task<I>(i2c_bus: &'static AsyncI2cBus<I>, hz: u64, sensory: u8)
     where
-        I: i2c::Instance,
+        I: I2cInstance,
     {
         let address = TargetAddr::default();
         let i2c = AsyncI2cDevice::new(&i2c_bus);
@@ -386,7 +327,7 @@ pub mod yxz_lsm6 {
 
     async fn inner_task<I>(i2c_bus: &'static AsyncI2cBus<I>, hz: u64, sensory: u8)
     where
-        I: hal::i2c::Instance,
+        I: I2cInstance,
     {
         let i2c = AsyncI2cDevice::new(&i2c_bus);
         let mut sensor = Sensor::new(i2c, sensory, hz);
@@ -429,7 +370,7 @@ pub mod yxz_lsm6 {
         sensory: u8,
         _just_spin: bool,
     ) where
-        I: hal::i2c::Instance,
+        I: I2cInstance,
     {
         let i2c_tca = AsyncI2cDevice::new(&i2c_bus);
         let tca = Xca9548a::new(i2c_tca, SlaveAddr::default());
@@ -469,7 +410,7 @@ pub mod yxz_bmi160 {
     use super::*;
     #[allow(unused)]
     use bmi160::{AccelerometerPowerMode, Bmi160, GyroscopePowerMode, SensorSelector, SlaveAddr};
-    use embassy_rp::i2c::Instance;
+    //use embassy_rp::i2c::Instance;
 
     /* control channels */
     pub static READY: AtomicBool = AtomicBool::new(false);
@@ -492,7 +433,7 @@ pub mod yxz_bmi160 {
 
     pub async fn inner_task<I>(i2c_bus: &'static AsyncI2cBus<I>, hz: u64, sensory: u8)
     where
-        I: Instance,
+        I: I2cInstance,
     {
         //DISP.signal([None, None, None, Some("BMI160 task".try_into().unwrap())]);
         let i2c = AsyncI2cDevice::new(&i2c_bus);
@@ -632,7 +573,7 @@ pub mod yxz_tlv {
 
     async fn inner_task<I>(i2c_bus: &'static AsyncI2cBus<I>, hz: u64, sensory: u8)
     where
-        I: hal::i2c::Instance,
+        I: I2cInstance,
     {
         let i2c = AsyncI2cDevice::new(&i2c_bus);
         //DISP.signal([None, None, None, Some("LVT task".try_into().unwrap())]);
@@ -677,7 +618,7 @@ pub mod yxz_tlv {
 
     async fn inner_task<I>(i2c_bus: &'static AsyncI2cBus<I>, hz: u64, sensory: u8)
     where
-        I: hal::i2c::Instance,
+        I: I2cInstance,
     {
         let i2c = AsyncI2cDevice::new(&i2c_bus);
         let sensor = Max3010x::new_max30102(i2c);
@@ -779,7 +720,7 @@ pub mod yco2 {
 
     pub async fn inner_task<I>(i2c_bus: &'static AsyncI2cBus<I>, sensory: u8)
     where
-        I: i2c::Instance,
+        I: I2cInstance,
     {
         //DISP.signal([None, None, None, Some("CO2 start".try_into().unwrap())]);
         let i2c = AsyncI2cDevice::new(&i2c_bus);
