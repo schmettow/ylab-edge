@@ -13,7 +13,6 @@ use {defmt_rtt as _, panic_probe as _};
 
 use defmt::*;
 use embassy_executor::Executor;
-use embedded_hal::digital::InputPin;
 use hal::adc::Async;
 #[allow(unused_imports)]
 use hal::gpio::Pin;
