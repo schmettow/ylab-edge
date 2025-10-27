@@ -20,6 +20,7 @@ pub mod ydata;
 pub mod ysns;
 pub mod yuii;
 pub mod ytfk;
+pub mod yuio;
 
 //pub use ybus::SharedI2cBus;
 //pub use ybus::SharedI2cDevice;
