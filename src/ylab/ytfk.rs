@@ -1,9 +1,9 @@
 pub use super::*;
 pub use core::fmt::Write;
-use ylab_lib::ydata::Ytf;
+use ylab_lib::ytfk::{Ytf, YtfChannel};
 
 //pub type Ytf = Sample<[Option<f32>; 8]>; // standard transport format
-#[allow(dead_code)]
+/*#[allow(dead_code)]
 type YtfLine = Vec<u8, 512>;
 #[allow(dead_code)]
 trait YtfSend {
@@ -25,6 +25,8 @@ impl YtfSend for Ytf {
     }
 }
 
+pub type YtfChannel = Channel<RawMutex, Ytf, 8>;
+*/
 pub mod bsu {
     use super::*;
     use embassy_usb_logger::*;
@@ -33,7 +35,7 @@ pub mod bsu {
     use mcu::usb::{Driver, InterruptHandler};
     use log::LevelFilter;
 
-    pub static SINK: Channel<RawMutex, Ytf, 3> = Channel::new();
+    pub static SINK: YtfChannel = Channel::new();
 
     #[embassy_executor::task]
     pub async fn logger_task(usb: Peri<'static, USB>, level: LevelFilter) {

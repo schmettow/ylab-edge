@@ -1,17 +1,10 @@
 use crate::ytfk::bsu::SINK;
 pub use crate::*;
-//pub use mcu::i2c;
 pub use mcu::i2c::Instance as I2cInstance;
-//pub type SharedI2cBus<I> = SharedBusMutex<embedded_hal_async::i2c::i2c::I2c<'static, I, ::i2c::Async>>;
 pub use ylab_lib::ybus::SharedI2cDevice;
 pub use ylab_lib::ydata::Sample;
-//use i2c::Async as Mode;
 pub use yuio::disp::TEXT as DISP;
 
-/*pub struct SensorResult<R> {
-    pub time: Instant,
-    pub reading: R,
-}*/
 
 #[derive(Debug)]
 pub enum YsenseErr {
@@ -20,16 +13,6 @@ pub enum YsenseErr {
     Task,
 }
 
-/*pub trait Ysense<const N: usize> {
-    type Measure;
-    async fn init(&mut self) -> Result<(), YsenseErr>;
-    async fn read(&self) -> Result<[Measure; N], YsenseErr>;
-}*/
-
-pub struct Sensor<T, const N: usize> {
-    _sensor: T,
-    pub id: u8,
-}
 
 pub mod moi {
     use super::*;
@@ -141,8 +124,6 @@ pub mod adc {
         sensory: u8,
     ) {
         let mut ticker = Ticker::every(Duration::from_hz(hz));
-        //let mut reading: Reading;
-        //let mut result: SensorResult<Reading>;
         let mut chan = [
             Channel::new_pin(adc_0, Pull::None),
             Channel::new_pin(adc_1, Pull::None),
@@ -480,70 +461,6 @@ pub mod yxz_bmi160 {
         }
     }
 
-    /*pub struct Sensor<I2C>
-    where
-        I2C: embedded_hal_async::i2c::I2c,
-    {
-        pub sensor: Bmi160<I2C>,
-        pub id: u8,
-        pub hz: u64,
-    }
-
-    impl<I> Sensor<I>
-    where
-        I: embedded_hal_async::i2c::I2c,
-    {
-        pub fn new(i2c: I, id: u8, hz: u64) -> Self
-        where
-            I: embedded_hal_async::i2c::I2c,
-        {
-            Self {
-                sensor: Bmi160::new_with_i2c(i2c, address),
-                id: id,
-                hz: hz,
-            }
-        }
-
-        pub async fn init(&mut self) -> Result<(), YsenseErr> {
-            self.sensor
-                .set_accel_power_mode(AccelerometerPowerMode::Normal)
-                .await
-                .unwrap();
-            //DISP.signal([None, Some("BMI160 accel".try_into().unwrap()), None, None]);
-            self.sensor
-                .set_gyro_power_mode(GyroscopePowerMode::Normal)
-                .await
-                .unwrap();
-            Ok(())
-        }
-
-        pub async fn read(&mut self) -> Result<Reading, YsenseErr> {
-            log::debug!("Yxz get");
-            let accel = self.sensor.accel_norm().await.unwrap();
-            let gyro = self.sensor.angular_rate().await.unwrap();
-            let reading = [
-                accel.x.as_meters_per_second_per_second() as f32,
-                accel.y.as_meters_per_second_per_second() as f32,
-                accel.z.as_meters_per_second_per_second() as f32,
-                gyro.x.as_hertz() as f32,
-                gyro.y.as_hertz() as f32,
-                gyro.z.as_hertz() as f32,
-            ];
-            Ok(reading)
-        }
-
-        pub async fn sample(&mut self) -> Result<Sample, ()> {
-            let reading = self.read().await;
-            match reading {
-                Ok(reading) => Ok(Sample {
-                    sensory: self.id,
-                    time: Instant::now(),
-                    read: reading,
-                }),
-                Err(_) => Err(()),
-            }
-        }
-    }*/
 }
 
 /// ## TLV Hall effect
@@ -577,7 +494,6 @@ pub mod yxz_tlv {
         I: I2cInstance,
     {
         let i2c = SharedI2cDevice::new(&i2c_bus);
-        //DISP.signal([None, None, None, Some("LVT task".try_into().unwrap())]);
         let address = 0x5E;
         let mut sensor = tlv::Tlv493d::new_async(i2c, address, tlv::Mode::Master)
             .await
@@ -696,8 +612,6 @@ pub mod yxz_tlv {
 
 pub mod yco2 {
     use super::*;
-    // use mcu::peripherals::I2C0;
-    //use scd4x;
 
     /* control channels */
     pub static READY: AtomicBool = AtomicBool::new(false);
