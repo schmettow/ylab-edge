@@ -35,8 +35,8 @@ use defmt::*;
 /// and deformat macros (!unwrap)
 use embassy_executor::Executor;
 #[allow(unused_imports)]
-use hal::adc::{Async, Blocking};
-use hal::multicore::{spawn_core1, Stack};
+use mcu::adc::{Async, Blocking};
+use mcu::multicore::{spawn_core1, Stack};
 
 /// The following code initializes the second stack, plus
 /// two heaps
@@ -44,13 +44,7 @@ static mut CORE1_STACK: Stack<4096> = Stack::new();
 static EXECUTOR0: StaticCell<Executor> = StaticCell::new();
 static EXECUTOR1: StaticCell<Executor> = StaticCell::new();
 
-/// +  multi-threading with async
-// use embassy_executor::Spawner;
-/// + timing using Embassy time
-// use embassy_time::{Duration, Ticker};
-/// + peripherals
-use hal::gpio::Pin;
-/// + four built-in ADC sensors
+
 use ylab::ysns::adc as yadc;
 use ylab::ysns::moi;
 /// + four ADCs on a ADS1115;
@@ -71,7 +65,8 @@ use ylab::yuii::btn as ybtn;
 /// + YUI input (LED) and output (button)
 use ylab::yuio::led as yled;
 use ylab::*;
-use ylab_lib::{Mutex, StaticCell};
+use ylab::mcu;
+use ylab_lib::StaticCell;
 
 /// ## Storage task
 ///
@@ -102,8 +97,6 @@ enum AppState {
     Record,
 }
 
-use hal::adc;
-use hal::bind_interrupts;
 /// In a usual multi-threaded app you would write the interaction model
 /// in the main task. However, with dual-core the main task is no longer
 /// async. Since all communication channels are static, this really doesn't matter.
@@ -112,8 +105,9 @@ use hal::bind_interrupts;
 ///
 /// + Initializing peripherals
 /// + spawning tasks
-/// + assigning periphs to tasks
-use ylab::hal;
+/// + assigning periphs to task
+use mcu::adc;
+use mcu::bind_interrupts;
 bind_interrupts!(struct Irqs {
     ADC_IRQ_FIFO => adc::InterruptHandler;
 });
@@ -125,8 +119,9 @@ bind_interrupts!(struct Irqs {
 fn init() -> ! {
     // Getting hold of the peripherals,
     // like pins, ADC, and I2C controllers.
-    let p = hal::init(Default::default());
+    let p = mcu::init(Default::default());
     // Spawning a process on the second core
+    #[allow(static_mut_refs)]
     spawn_core1(p.CORE1, unsafe { &mut CORE1_STACK }, move || {
         // The second core has its own executor, which is
         // is the Embassy mechanism to handle concurrency.
@@ -176,9 +171,9 @@ fn init() -> ! {
     });
 }
 
-use crate::hal::gpio::Input;
-use crate::hal::gpio::Pull;
-use embassy_rp::peripherals::PIN_20;
+use mcu::gpio::Input;
+use mcu::gpio::Pull;
+use mcu::peripherals::PIN_20;
 
 #[embassy_executor::task]
 async fn ybtn_20(pin: Peri<'static, PIN_20>) {

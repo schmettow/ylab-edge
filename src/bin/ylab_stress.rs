@@ -4,12 +4,6 @@
 /// CONFIGURATION
 ///
 /// Adc Tcm
-static DEV: (bool, bool, bool) = (true, true, true);
-static HZ: (u64, u64, u64) = (0, 211, 0);
-static SPEED: u32 = 100_000;
-static RUN_DISP: bool = false;
-use core::cell::RefCell;
-
 use {defmt_rtt as _, panic_probe as _};
 
 /// The following code initializes the second stack, plus
@@ -26,7 +20,7 @@ use ysns::adc as yadc;
 use ysns::moi;
 use ysns::yco2;
 use ytfk::bsu as ybsu;
-use yuii::btn as ybtn;
+use ylab_lib::yuii::btn as ybtn;
 use yuio::disp as ydsp;
 use yuio::led as yled;
 
@@ -43,12 +37,11 @@ enum AppState {
     Record,
 }
 
-use hal::adc;
-use hal::bind_interrupts;
-use hal::gpio::Pin;
-use hal::i2c::{self, Config};
-use hal::peripherals::{I2C0, I2C1};
-use ylab::hal;
+use mcu::adc;
+use mcu::bind_interrupts;
+use mcu::i2c::{self, Config};
+use mcu::peripherals::{I2C0, I2C1};
+use ylab::mcu;
 bind_interrupts!(struct Irqs {
     I2C0_IRQ => i2c::InterruptHandler<I2C0>;
     I2C1_IRQ => i2c::InterruptHandler<I2C1>;
@@ -58,19 +51,19 @@ bind_interrupts!(struct Irqs {
 use defmt::*;
 use embassy_executor::Executor;
 #[allow(unused_imports)]
-use hal::adc::{Async, Blocking};
-use hal::multicore::{spawn_core1, Stack};
+use mcu::adc::{Async, Blocking};
+use mcu::multicore::{spawn_core1, Stack};
 
 #[cortex_m_rt::entry]
 fn init() -> ! {
-    let p = hal::init(Default::default());
+    let p = mcu::init(Default::default());
     // Init I2C shared busses
     let config = Config::default();
-    static I2C_BUS_0: StaticCell<AsyncI2cBus<I2C0>> = StaticCell::new();
+    static I2C_BUS_0: StaticCell<SharedI2cBus<I2C0>> = StaticCell::new();
     let i2c0 = i2c::I2c::new_async(p.I2C0, p.PIN_1, p.PIN_0, Irqs, config);
     #[allow(unused_variables)]
     let i2c_bus_0 = I2C_BUS_0.init(Mutex::new(i2c0));
-    static I2C_BUS_1: StaticCell<AsyncI2cBus<I2C1>> = StaticCell::new();
+    static I2C_BUS_1: StaticCell<SharedI2cBus<I2C1>> = StaticCell::new();
     let i2c1 = i2c::I2c::new_async(p.I2C1, p.PIN_3, p.PIN_2, Irqs, config);
     #[allow(unused_variables)]
     let i2c_bus_1 = I2C_BUS_1.init(Mutex::new(i2c1));
@@ -109,16 +102,16 @@ fn init() -> ! {
                 p.PIN_26.into(),
                 p.PIN_27.into(),
                 p.PIN_28.into(),
-                HZ.1,
+                201,
                 1,
             ))
             .unwrap();
     });
 }
 
-use crate::hal::gpio::Input;
-use crate::hal::gpio::Pull;
-use embassy_rp::peripherals::PIN_20;
+use mcu::gpio::Input;
+use mcu::gpio::Pull;
+use mcu::peripherals::PIN_20;
 
 #[embassy_executor::task]
 async fn ybtn_20(pin: Peri<'static, PIN_20>) {
