@@ -11,6 +11,7 @@ use {defmt_rtt as _, panic_probe as _};
 
 use defmt::*;
 use embassy_executor::Executor;
+use embassy_rp::gpio::Output;
 use mcu::adc::Async;
 #[allow(unused_imports)]
 use mcu::gpio::Pin;
@@ -29,7 +30,7 @@ use ylab::ysns::adc as yadc;
 use ylab::ysns::moi;
 use ylab::ytfk::bsu as ybsu;
 use ylab_lib::yuii::btn as ybtn;
-use ylab::yuio::led as yled;
+use ylab_lib::yuio::led as yled;
 use ylab::*;
 
 use ylab_lib::{Mutex, StaticCell};
@@ -110,7 +111,9 @@ fn init() -> ! {
             .unwrap();
 
         // task for controlling the led
-        unwrap!(spawner.spawn(yled::task(p.PIN_25.into())));
+        use mcu::gpio::{Output, Level};
+        let led = Output::new(p.PIN_25, Level::Low);
+        unwrap!(spawner.spawn(led_task(led)));
         // task for listening to button presses.
         unwrap!(spawner.spawn(ybtn_20(p.PIN_20.into())));
         // task listening for data packeges to send up the line (reverse USB ;)
@@ -121,11 +124,16 @@ fn init() -> ! {
     });
 }
 
+// LED task
+#[embassy_executor::task]
+async fn led_task(led: Output<'static>){
+	ylab_lib::yuio::led::task(led).await
+}
 
 // LSM6 task
 #[embassy_executor::task]
 async fn lsm6_multi_task(i2c: I2c1) {
-	lsm6::inner_multi_task(i2c, 6, 100, 2, false).await;
+	lsm6::inner_multi_task(i2c, 6, 100, 2, false, ytfk::bsu::SINK.sender()).await;
 }
 
 // Button task
