@@ -28,9 +28,9 @@ impl YtfSend for Ytf {
 pub mod bsu {
     use super::*;
     use embassy_usb_logger::*;
-    use hal::bind_interrupts;
-    use hal::peripherals::USB;
-    use hal::usb::{Driver, InterruptHandler};
+    use mcu::bind_interrupts;
+    use mcu::peripherals::USB;
+    use mcu::usb::{Driver, InterruptHandler};
     use log::LevelFilter;
 
     pub static SINK: Channel<RawMutex, Ytf, 3> = Channel::new();

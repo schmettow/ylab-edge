@@ -51,9 +51,9 @@ pub mod led {
 
 pub mod disp {
     use super::*;
-    use ylab_lib::ybus::AsyncI2cDevice;
-    //use hal::i2c;
-    //use hal::peripherals::I2C1 as I2C;
+    use ylab_lib::ybus::SharedI2cDevice;
+    //use mcu::i2c;
+    //use mcu::peripherals::I2C1 as I2C;
     //use i2c::Async as Mode;
     use ssd1306::{prelude::*, I2CDisplayInterface, Ssd1306Async};
     // inter-thread communication
@@ -64,23 +64,23 @@ pub mod disp {
     pub static TEXT: Signal<RawMutex, FourLines> = Signal::new();
 
     #[embassy_executor::task]
-    pub async fn task_0(i2c_bus: &'static AsyncI2cBus<I2C0>) {
+    pub async fn task_0(i2c_bus: &'static SharedI2cBus<I2C0>) {
         inner_task(i2c_bus).await
     }
 
     #[embassy_executor::task]
-    pub async fn task_1(i2c_bus: &'static AsyncI2cBus<I2C1>) {
+    pub async fn task_1(i2c_bus: &'static SharedI2cBus<I2C1>) {
         inner_task(i2c_bus).await
     }
 
     // Text display
     //use core::fmt::Write;
 
-    async fn inner_task<I>(i2c_bus: &'static AsyncI2cBus<I>)
+    async fn inner_task<I>(i2c_bus: &'static SharedI2cBus<I>)
     where
-        I: hal::i2c::Instance,
+        I: mcu::i2c::Instance,
     {
-        let i2c = AsyncI2cDevice::new(&i2c_bus);
+        let i2c = SharedI2cDevice::new(&i2c_bus);
         let interface = I2CDisplayInterface::new(i2c);
         let mut display = Ssd1306Async::new(interface, DisplaySize128x64, DisplayRotation::Rotate0)
             .into_terminal_mode();

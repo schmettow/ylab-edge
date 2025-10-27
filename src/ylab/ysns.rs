@@ -1,8 +1,9 @@
 use crate::ytfk::bsu::SINK;
 pub use crate::*;
-//pub use hal::i2c;
-pub use hal::i2c::Instance as I2cInstance;
-pub use ylab_lib::ybus::AsyncI2cDevice;
+//pub use mcu::i2c;
+pub use mcu::i2c::Instance as I2cInstance;
+//pub type SharedI2cBus<I> = SharedBusMutex<embedded_hal_async::i2c::i2c::I2c<'static, I, ::i2c::Async>>;
+pub use ylab_lib::ybus::SharedI2cDevice;
 pub use ylab_lib::ydata::Sample;
 //use i2c::Async as Mode;
 pub use yuio::disp::TEXT as DISP;
@@ -32,8 +33,8 @@ pub struct Sensor<T, const N: usize> {
 
 pub mod moi {
     use super::*;
-    use hal::gpio::{Input, Pull};
-    use hal::peripherals::{PIN_21, PIN_22};
+    use mcu::gpio::{Input, Pull};
+    use mcu::peripherals::{PIN_21, PIN_22};
 
     pub type Measure = bool;
     pub type Reading<const N: usize> = [Measure; N];
@@ -111,9 +112,9 @@ pub mod moi {
 pub mod adc {
 
     use super::*;
-    use hal::adc::{Adc, Async, Channel};
-    use hal::gpio::Pull;
-    use hal::peripherals::{PIN_26, PIN_27, PIN_28};
+    use mcu::adc::{Adc, Async, Channel};
+    use mcu::gpio::Pull;
+    use mcu::peripherals::{PIN_26, PIN_27, PIN_28};
 
     pub type Reading = [u16; 3];
     pub struct Result {
@@ -128,7 +129,7 @@ pub mod adc {
     pub static READY: AtomicBool = AtomicBool::new(false);
     pub static RECORD: AtomicBool = AtomicBool::new(false);
 
-    //type AdcPin: embedded_hal::adc::Channel<embassy_rp::adc::Adc<'static>> + embassy_rp::gpio::Pin;
+    //type AdcPin: embedded_mcu::adc::Channel<embassy_rp::adc::Adc<'static>> + embassy_rp::gpio::Pin;
 
     #[embassy_executor::task]
     pub async fn task(
@@ -186,21 +187,21 @@ pub mod ads1115 {
     pub static RECORD: AtomicBool = AtomicBool::new(false);
 
     #[embassy_executor::task]
-    pub async fn task_0(i2c_bus: &'static AsyncI2cBus<I2C0>, hz: u64, sensory: u8) {
+    pub async fn task_0(i2c_bus: &'static SharedI2cBus<I2C0>, hz: u64, sensory: u8) {
         inner_task(i2c_bus, hz, sensory).await
     }
 
     #[embassy_executor::task]
-    pub async fn task_1(i2c_bus: &'static AsyncI2cBus<I2C1>, hz: u64, sensory: u8) {
+    pub async fn task_1(i2c_bus: &'static SharedI2cBus<I2C1>, hz: u64, sensory: u8) {
         inner_task(i2c_bus, hz, sensory).await
     }
 
-    async fn inner_task<I>(i2c_bus: &'static AsyncI2cBus<I>, hz: u64, sensory: u8)
+    async fn inner_task<I>(i2c_bus: &'static SharedI2cBus<I>, hz: u64, sensory: u8)
     where
         I: I2cInstance,
     {
         let address = TargetAddr::default();
-        let i2c = AsyncI2cDevice::new(&i2c_bus);
+        let i2c = SharedI2cDevice::new(&i2c_bus);
         let mut ads = Ads1x1x::new_ads1115(i2c, address).await;
         ads.set_data_rate(DataRate::Sps860).await.unwrap();
         let mut ticker = Ticker::every(Duration::from_hz(hz));
@@ -241,12 +242,12 @@ pub mod yxz_lsm6 {
     pub type Sample = ydata::Sample<Measure, N>;
 
     #[embassy_executor::task]
-    pub async fn task_0(i2c_bus: &'static AsyncI2cBus<I2C0>, hz: u64, sensory: u8) {
+    pub async fn task_0(i2c_bus: &'static SharedI2cBus<I2C0>, hz: u64, sensory: u8) {
         inner_task(i2c_bus, hz, sensory).await;
     }
 
     #[embassy_executor::task]
-    pub async fn task_1(i2c_bus: &'static AsyncI2cBus<I2C1>, hz: u64, sensory: u8) {
+    pub async fn task_1(i2c_bus: &'static SharedI2cBus<I2C1>, hz: u64, sensory: u8) {
         inner_task(i2c_bus, hz, sensory).await;
     }
 
@@ -325,11 +326,11 @@ pub mod yxz_lsm6 {
         }
     }
 
-    async fn inner_task<I>(i2c_bus: &'static AsyncI2cBus<I>, hz: u64, sensory: u8)
+    async fn inner_task<I>(i2c_bus: &'static SharedI2cBus<I>, hz: u64, sensory: u8)
     where
         I: I2cInstance,
     {
-        let i2c = AsyncI2cDevice::new(&i2c_bus);
+        let i2c = SharedI2cDevice::new(&i2c_bus);
         let mut sensor = Sensor::new(i2c, sensory, hz);
         sensor.init().await.unwrap();
         let mut ticker = Ticker::every(Duration::from_hz(hz));
@@ -342,7 +343,7 @@ pub mod yxz_lsm6 {
     ///
     #[embassy_executor::task]
     pub async fn multi_task_0(
-        i2c_bus: &'static AsyncI2cBus<I2C0>,
+        i2c_bus: &'static SharedI2cBus<I2C0>,
         n: u8,
         hz: u64,
         just_spin: bool,
@@ -353,7 +354,7 @@ pub mod yxz_lsm6 {
 
     #[embassy_executor::task]
     pub async fn multi_task_1(
-        i2c_bus: &'static AsyncI2cBus<I2C1>,
+        i2c_bus: &'static SharedI2cBus<I2C1>,
         n: u8,
         hz: u64,
         just_spin: bool,
@@ -364,7 +365,7 @@ pub mod yxz_lsm6 {
 
     use xca9548a::{SlaveAddr, Xca9548a};
     async fn inner_multi_task<I>(
-        i2c_bus: &'static AsyncI2cBus<I>,
+        i2c_bus: &'static SharedI2cBus<I>,
         n: u8,
         hz: u64,
         sensory: u8,
@@ -372,7 +373,7 @@ pub mod yxz_lsm6 {
     ) where
         I: I2cInstance,
     {
-        let i2c_tca = AsyncI2cDevice::new(&i2c_bus);
+        let i2c_tca = SharedI2cDevice::new(&i2c_bus);
         let tca = Xca9548a::new(i2c_tca, SlaveAddr::default());
         let hub = tca.split();
 
@@ -422,21 +423,21 @@ pub mod yxz_bmi160 {
     pub type Sample = ydata::Sample<Measure, N>;
 
     #[embassy_executor::task]
-    pub async fn task_0(i2c_bus: &'static AsyncI2cBus<I2C0>, hz: u64, sensory: u8) {
+    pub async fn task_0(i2c_bus: &'static SharedI2cBus<I2C0>, hz: u64, sensory: u8) {
         inner_task::<I2C0>(&i2c_bus, hz, sensory).await
     }
 
     #[embassy_executor::task]
-    pub async fn task_1(i2c_bus: &'static AsyncI2cBus<I2C1>, hz: u64, sensory: u8) {
+    pub async fn task_1(i2c_bus: &'static SharedI2cBus<I2C1>, hz: u64, sensory: u8) {
         inner_task::<I2C1>(&i2c_bus, hz, sensory).await
     }
 
-    pub async fn inner_task<I>(i2c_bus: &'static AsyncI2cBus<I>, hz: u64, sensory: u8)
+    pub async fn inner_task<I>(i2c_bus: &'static SharedI2cBus<I>, hz: u64, sensory: u8)
     where
         I: I2cInstance,
     {
         //DISP.signal([None, None, None, Some("BMI160 task".try_into().unwrap())]);
-        let i2c = AsyncI2cDevice::new(&i2c_bus);
+        let i2c = SharedI2cDevice::new(&i2c_bus);
         let address = SlaveAddr::default();
         let mut sensor = Bmi160::new_with_i2c(i2c, address);
         //DISP.signal([None, Some("BMI160 |==| I2C".try_into().unwrap()), None, None]);
@@ -562,20 +563,20 @@ pub mod yxz_tlv {
     pub type Sample = ydata::Sample<Measure, N>;
 
     #[embassy_executor::task]
-    pub async fn task_0(i2c_bus: &'static AsyncI2cBus<I2C0>, hz: u64, sensory: u8) {
+    pub async fn task_0(i2c_bus: &'static SharedI2cBus<I2C0>, hz: u64, sensory: u8) {
         inner_task(i2c_bus, hz, sensory).await;
     }
 
     #[embassy_executor::task]
-    pub async fn task_1(i2c_bus: &'static AsyncI2cBus<I2C1>, hz: u64, sensory: u8) {
+    pub async fn task_1(i2c_bus: &'static SharedI2cBus<I2C1>, hz: u64, sensory: u8) {
         inner_task(i2c_bus, hz, sensory).await;
     }
 
-    async fn inner_task<I>(i2c_bus: &'static AsyncI2cBus<I>, hz: u64, sensory: u8)
+    async fn inner_task<I>(i2c_bus: &'static SharedI2cBus<I>, hz: u64, sensory: u8)
     where
         I: I2cInstance,
     {
-        let i2c = AsyncI2cDevice::new(&i2c_bus);
+        let i2c = SharedI2cDevice::new(&i2c_bus);
         //DISP.signal([None, None, None, Some("LVT task".try_into().unwrap())]);
         let address = 0x5E;
         let mut sensor = tlv::Tlv493d::new_async(i2c, address, tlv::Mode::Master)
@@ -612,15 +613,15 @@ pub mod yxz_tlv {
     pub type Measure = SensorResult<Reading>;
 
     #[embassy_executor::task]
-    pub async fn task_0(i2c_bus: &'static AsyncI2cBus<I2C0>, hz: u64, sensory: u8) {
+    pub async fn task_0(i2c_bus: &'static SharedI2cBus<I2C0>, hz: u64, sensory: u8) {
         inner_task(i2c_bus, hz, sensory).await
     }
 
-    async fn inner_task<I>(i2c_bus: &'static AsyncI2cBus<I>, hz: u64, sensory: u8)
+    async fn inner_task<I>(i2c_bus: &'static SharedI2cBus<I>, hz: u64, sensory: u8)
     where
         I: I2cInstance,
     {
-        let i2c = AsyncI2cDevice::new(&i2c_bus);
+        let i2c = SharedI2cDevice::new(&i2c_bus);
         let sensor = Max3010x::new_max30102(i2c);
         sensor.wake_up().await.unwrap();
         sensor.into_multi_led().await;
@@ -655,8 +656,8 @@ pub mod yxz_tlv {
     pub type Measure = SensorResult<Reading>;
 
     // I2C
-    use hal::i2c;
-    use hal::peripherals::I2C0;
+    use mcu::i2c;
+    use mcu::peripherals::I2C0;
 
     /* control channels */
     use core::sync::atomic::AtomicBool;
@@ -695,7 +696,7 @@ pub mod yxz_tlv {
 
 pub mod yco2 {
     use super::*;
-    // use hal::peripherals::I2C0;
+    // use mcu::peripherals::I2C0;
     //use scd4x;
 
     /* control channels */
@@ -709,21 +710,21 @@ pub mod yco2 {
     pub type Sample = ydata::Sample<Measure, N>;
 
     #[embassy_executor::task]
-    pub async fn task_0(i2c_bus: &'static AsyncI2cBus<I2C0>, sensory: u8) {
+    pub async fn task_0(i2c_bus: &'static SharedI2cBus<I2C0>, sensory: u8) {
         inner_task(i2c_bus, sensory).await;
     }
 
     #[embassy_executor::task]
-    pub async fn task_1(i2c_bus: &'static AsyncI2cBus<I2C1>, sensory: u8) {
+    pub async fn task_1(i2c_bus: &'static SharedI2cBus<I2C1>, sensory: u8) {
         inner_task(i2c_bus, sensory).await;
     }
 
-    pub async fn inner_task<I>(i2c_bus: &'static AsyncI2cBus<I>, sensory: u8)
+    pub async fn inner_task<I>(i2c_bus: &'static SharedI2cBus<I>, sensory: u8)
     where
         I: I2cInstance,
     {
         //DISP.signal([None, None, None, Some("CO2 start".try_into().unwrap())]);
-        let i2c = AsyncI2cDevice::new(&i2c_bus);
+        let i2c = SharedI2cDevice::new(&i2c_bus);
         let mut sensor = scd4x::Scd4xAsync::new(i2c, time::Delay);
         //sensor.wake_up(); <---- This fails
         sensor.stop_periodic_measurement().await.unwrap();
