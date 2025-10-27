@@ -22,6 +22,8 @@ pub struct Sensor<T, const N: usize> {
 
 pub mod yxz_lsm6 {
 
+    use crate::ytfk::YtfSender;
+
     use super::*;
     //use accelerometer::Accelerometer;
     use Lsm6dsox as Lsm6;
@@ -120,7 +122,7 @@ pub mod yxz_lsm6 {
         }
     }
 
-    pub async fn task<M, B>(i2c: SharedI2cDevice<'_, M, B>, hz: u64, sensory: u8)
+    pub async fn task<M, B>(i2c: SharedI2cDevice<'_, M, B>, hz: u64, sensory: u8, sink: ytfk::YtfSender<'_>)
     where
     	M: SharedDeviceMutex,
      	B: AsyncI2c,
@@ -133,34 +135,12 @@ pub mod yxz_lsm6 {
         let mut sensor = Sensor::new(i2c, sensory, hz);
         sensor.init().await.unwrap();
         let mut ticker = Ticker::every(Duration::from_hz(hz));
-        //SINK.send(sensor.sample().await.unwrap().into()).await;
+        sink.send(sensor.sample().await.unwrap().into()).await;
         log::debug!("Yxz read");
         ticker.next().await;
     }
 
-    // Multi-task
-    //
-    /*#[embassy_executor::task]
-    pub async fn multi_task_0(
-        i2c_bus: &'static SharedI2cBus<I2C0>,
-        n: u8,
-        hz: u64,
-        just_spin: bool,
-        sensory: u8,
-    ) {
-        inner_multi_task(i2c_bus, n, hz, sensory, just_spin).await
-    }*/
-
-    /*#[embassy_executor::task]
-    pub async fn multi_task_1(
-        i2c_bus: &'static SharedI2cBus<I2C1>,
-        n: u8,
-        hz: u64,
-        just_spin: bool,
-        sensory: u8,
-    ) {
-        inner_multi_task(i2c_bus, n, hz, sensory, just_spin).await
-    }*/
+    // MULTI Task
 
     use xca9548a::{SlaveAddr, Xca9548a};
     pub async fn inner_multi_task<M,B>(
@@ -169,6 +149,7 @@ pub mod yxz_lsm6 {
         hz: u64,
         sensory: u8,
         _just_spin: bool,
+        sink: YtfSender<'_>,
     ) where
         M: SharedDeviceMutex,
         B: AsyncI2c,
@@ -200,7 +181,7 @@ pub mod yxz_lsm6 {
                 continue;
             }
             if let Ok(s) = sensor.sample().await {
-                //SINK.send(s.into()).await;
+                sink.send(s.into()).await;
             }
         }
     }
