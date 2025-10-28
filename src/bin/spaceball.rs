@@ -75,7 +75,7 @@ fn init() -> ! {
                 let mut config = Config::default();
                 config.frequency = SPEED.into();
                 let i2c0 = i2c::I2c::new_async(p.I2C0, p.PIN_1, p.PIN_0, Irqs, config);
-                static I2C_BUS_0: StaticCell<AsyncI2cBus<I2C0>> = StaticCell::new();
+                static I2C_BUS_0: StaticCell<SharedI2cBus<I2C0>> = StaticCell::new();
                 let i2c_bus_0 = I2C_BUS_0.init(embassy_sync::mutex::Mutex::new(i2c0));
 
                 spawner.spawn(tlv::task_0(i2c_bus_0, HZ.2, 2)).unwrap()
