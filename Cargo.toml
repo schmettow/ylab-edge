@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "ylab-lib",
     "ylab-rp2040",
+    "ylab-f446zet",
     "ylab-sensors/async-bmi160-rs",
     "ylab-sensors/async-max3010x-rs",
     "ylab-sensors/async-lsm6dsox-rs",

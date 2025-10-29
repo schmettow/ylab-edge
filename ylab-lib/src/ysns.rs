@@ -187,6 +187,63 @@ pub mod yxz_lsm6 {
     }
 }
 
+pub mod moi {
+    use super::*;
+    use embedded_hal_async::digital::Wait;
+    use embedded_hal::digital::InputPin;
+    //use mcu::gpio::{Input, Pull};
+    //use mcu::peripherals::{PIN_21, PIN_22};
+
+    pub type Measure = bool;
+    pub type Reading<const N: usize> = [Measure; N];
+    pub type Sample<const N: usize> = ydata::Sample<Measure, N>;
+
+    /* control channels */
+    pub static READY: AtomicBool = AtomicBool::new(false);
+    pub static RECORD: AtomicBool = AtomicBool::new(true);
+
+
+    //#[embassy_executor::task]
+    pub async fn inner_task<P: Wait>(
+        mut moi_0: P,
+        mut moi_1: P,
+        mut moi_2: P,
+        mut moi_3: P,
+        sensory: u8,
+        sink: ytfk::YtfSender<'_>,
+    ) where 
+        P: Wait + InputPin,
+        {
+        /*let mut moi_0 = Input::new(moi_0, Pull::Up);
+        let mut moi_1 = Input::new(moi_1, Pull::Up);
+        let mut moi_2 = Input::new(moi_2, Pull::Up);
+        let mut moi_3 = Input::new(moi_3, Pull::Up);*/
+
+        use embassy_futures::select::select;
+        loop {
+            if RECORD.load(ORD) {
+                select(
+                    select(moi_0.wait_for_any_edge(), moi_1.wait_for_any_edge()),
+                    select(moi_2.wait_for_any_edge(), moi_3.wait_for_any_edge()),
+                )
+                .await;
+                let reading = [
+                    moi_0.is_high().unwrap_or(false),
+                    moi_1.is_high().unwrap_or(false),
+                    moi_2.is_high().unwrap_or(false),
+                    moi_3.is_high().unwrap_or(false),
+                ];
+                let sample = Sample {
+                    sensory: sensory,
+                    time: Instant::now(),
+                    read: reading,
+                };
+                sink.send(sample.into()).await;
+            };
+        }
+    }
+}
+
 pub mod btn {
     use super::*;
     use embedded_hal_async::digital::Wait;
