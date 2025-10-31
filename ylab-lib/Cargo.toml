@@ -22,5 +22,7 @@ log = "0.4.28"
 
 lsm6dsox = { path = "../ylab-sensors/async-lsm6dsox-rs" }
 xca9548a = { path = "../ylab-sensors/async-xca9548a-rs" }
+ads1299 = { path = "../ylab-sensors/async-ads1299-rs" }
 embedded-hal = "1.0.0"
 embassy-futures = { version = "0.1.2", features = ["defmt"] }
+embassy-executor = "0.9.1"

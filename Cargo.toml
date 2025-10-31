@@ -10,6 +10,7 @@ members = [
     "ylab-sensors/async-ssd1306",
     "ylab-sensors/async-xca9548a-rs",
     "ylab-sensors/async-ads1x1x-rs",
+    "ylab-sensors/async-ads1299-rs",
     "ylab-sensors/async-tlv493d-rs",
 ]
 
