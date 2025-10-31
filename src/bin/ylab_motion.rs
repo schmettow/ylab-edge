@@ -53,14 +53,13 @@ use mcu::bind_interrupts;
 use mcu::i2c::{self, Config};
 use mcu::peripherals::{I2C0, I2C1};
 use ylab::mcu;
+//use ylab::*;
 use ylab_lib::ysns::yxz_lsm6 as lsm6;
 bind_interrupts!(struct Irqs {
     I2C0_IRQ => i2c::InterruptHandler<I2C0>;
     I2C1_IRQ => i2c::InterruptHandler<I2C1>;
     ADC_IRQ_FIFO => adc::InterruptHandler;
 });
-
-static I2C_BUS_1: StaticCell<SharedI2cBus<I2C1>> = StaticCell::new();
 
 #[cortex_m_rt::entry]
 fn init() -> ! {
@@ -74,6 +73,7 @@ fn init() -> ! {
     let i2c_bus_0 = I2C_BUS_0.init(Mutex::new(i2c0));
 
     // IC2 Bus 1
+    static I2C_BUS_1: StaticCell<SharedI2cBus<I2C1>> = StaticCell::new();
     let i2c1 = i2c::I2c::new_async(p.I2C1, p.PIN_3, p.PIN_2, Irqs, config);
     let i2c_bus_1 = I2C_BUS_1.init(Mutex::new(i2c1));
     let i2c11 = SharedI2cDevice::new(i2c_bus_1);
@@ -132,7 +132,7 @@ async fn led_task(led: Output<'static>){
 
 // LSM6 task
 #[embassy_executor::task]
-async fn lsm6_multi_task(i2c: I2c1) {
+async fn lsm6_multi_task(i2c: SharedI2c1) {
 	lsm6::inner_multi_task(i2c, 6, 100, 2, false, ytfk::bsu::SINK.sender()).await;
 }
 

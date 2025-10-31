@@ -23,4 +23,5 @@ pub type SharedBusMutex<I> = embassy_sync::mutex::Mutex<SharedBusMutexType, I>;
 pub type SharedI2cBus<D> =
     SharedBusMutex<mcu::i2c::I2c<'static, D, Async>>;
 
-pub type I2c1 = I2cDevice<'static, SharedBusMutexType, I2c<'static, I2C1, mcu::i2c::Async>>;
+pub type SharedI2c0 = I2cDevice<'static, SharedBusMutexType, I2c<'static, I2C0, mcu::i2c::Async>>;
+pub type SharedI2c1 = I2cDevice<'static, SharedBusMutexType, I2c<'static, I2C1, mcu::i2c::Async>>;
