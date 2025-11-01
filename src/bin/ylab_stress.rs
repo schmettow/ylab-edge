@@ -13,16 +13,18 @@ static EXECUTOR0: StaticCell<Executor> = StaticCell::new();
 static EXECUTOR1: StaticCell<Executor> = StaticCell::new();
 
 use ylab_lib as yll;
-use yll::{Mutex, StaticCell};
 use yll::ysns::moi;
-use yll::ysns::yco2;
 use yll::yuii::btn as ybtn;
 use yll::yuio::led as yled;
-use ydsp::TEXT as DISP;
+use ylab::task::{moi_task, btn20_task, led_task};
+use yll::ysns::yco2;
+//use yll::yuii::btn as ybtn;
+//use yll::yuio::led as yled;
+//use ydsp::TEXT as DISP;
 use ylab::*;
 use ysns::adc as yadc;
 use ytfk::bsu as ybsu;
-use yuio::disp as ydsp;
+//use yuio::disp as ydsp;
 //use yuio::led as yled;
 
 #[derive(
@@ -94,7 +96,7 @@ fn init() -> ! {
         unwrap!(spawner.spawn(led_task(led)));
         unwrap!(spawner.spawn(display_task(i2c02)));
         // listening to button presses.
-        unwrap!(spawner.spawn(ybtn_20(p.PIN_20.into())));
+        unwrap!(spawner.spawn(btn20_task(p.PIN_20.into())));
         //  listening for data packeges to send up the line (reverse USB ;)
         unwrap!(spawner.spawn(ybsu::logger_task(p.USB, log::LevelFilter::Info)));
         unwrap!(spawner.spawn(ybsu::task()));
@@ -102,7 +104,12 @@ fn init() -> ! {
         unwrap!(spawner.spawn(control_task()));
         // collect moi events
         spawner
-            .spawn(ylab::ysns::moi::task_2(p.PIN_21, p.PIN_22, 0))
+            .spawn(moi_task(
+                p.PIN_21.into(),
+                p.PIN_22.into(),
+                p.PIN_8.into(),
+                p.PIN_9.into(),
+            ))
             .unwrap();
         // ADC task
         let adc0: adc::Adc<'_, Async> = adc::Adc::new(p.ADC, Irqs, adc::Config::default());
@@ -119,7 +126,7 @@ fn init() -> ! {
     });
 }
 
-use mcu::gpio::{Input, Output};
+/*use mcu::gpio::{Input, Output};
 use mcu::gpio::Pull;
 use mcu::peripherals::PIN_20;
 
@@ -133,7 +140,8 @@ async fn led_task(led: Output<'static>){
 async fn ybtn_20(pin: Peri<'static, PIN_20>) {
     let pin = Input::new(pin, Pull::Up);
     yuii::btn::inner_task(pin).await;
-}
+}*/
+
 #[embassy_executor::task]
 async fn ads_task(i2c: SharedI2c1) {
 	yll::ysns::ads1115::inner_task(i2c, 101, 3, ybsu::SINK.sender()).await;
@@ -176,7 +184,7 @@ async fn control_task() {
                     moi::RECORD.store(false, ORD);
                     yadc::RECORD.store(false, ORD);
                     //yco2::RECORD.store(false, ORD);
-                    DISP.signal([Some("New".try_into().unwrap()), None, None, None]);
+                    //DISP.signal([Some("New".try_into().unwrap()), None, None, None]);
                 }
                 AppState::Ready => {
                     // Pause all sensors and blink
@@ -184,7 +192,7 @@ async fn control_task() {
                     moi::RECORD.store(false, ORD);
                     yadc::RECORD.store(false, ORD);
                     //yco2::RECORD.store(false, ORD);
-                    DISP.signal([Some("Ready".try_into().unwrap()), None, None, None]);
+                    //DISP.signal([Some("Ready".try_into().unwrap()), None, None, None]);
                 }
                 AppState::Record => {
                     // Transmit sensor data and light up
@@ -192,7 +200,7 @@ async fn control_task() {
                     yled::LED.signal(yled::State::Steady);
                     yadc::RECORD.store(true, ORD);
                     //yco2::RECORD.store(true, ORD);
-                    DISP.signal([Some("Record".try_into().unwrap()), None, None, None]);
+                    //DISP.signal([Some("Record".try_into().unwrap()), None, None, None]);
                 }
             }
             state = next_state;

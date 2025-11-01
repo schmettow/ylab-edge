@@ -15,15 +15,20 @@ static mut CORE1_STACK: Stack<4096> = Stack::new();
 static EXECUTOR0: StaticCell<Executor> = StaticCell::new();
 static EXECUTOR1: StaticCell<Executor> = StaticCell::new();
 
-use ylab::ysns::adc as yadc;
-//use ylab::ysns::moi;
-use ylab::ytfk::bsu as ybsu;
-use ylab::yuii::btn as ybtn;
-use ylab::yuio::led as yled;
+
+use ylab_lib as yll;
+use yll::ysns::moi;
+use yll::yuii::btn as ybtn;
+use yll::yuio::led as yled;
+
 use ylab::*;
-use ylab::mcu;
-use ylab_lib::ysns::moi as moi;
-use ylab_lib::StaticCell;
+use task::{moi_task, btn20_task, led_task};
+use ysns::adc as yadc;
+use ytfk::bsu as ybsu;
+use mcu::gpio::{Output, Level};
+
+
+use yll::StaticCell;
 
 #[derive(
     Debug, // used as fmt
@@ -61,7 +66,7 @@ fn init() -> ! {
 	                0,
             ))
             .unwrap();*/
-            
+
             spawner.spawn(
          		moi_task(
 	                p.PIN_21.into(),
@@ -82,9 +87,10 @@ fn init() -> ! {
     let executor0 = EXECUTOR0.init(Executor::new());
     executor0.run(|spawner| {
         // task for controlling the led
-        unwrap!(spawner.spawn(yled::task(p.PIN_25.into())));
+        let led = Output::new(p.PIN_25, Level::Low);
+        unwrap!(spawner.spawn(led_task(led)));
         // task for listening to button presses.
-        unwrap!(spawner.spawn(ybtn_20(p.PIN_20.into())));
+        unwrap!(spawner.spawn(btn20_task(p.PIN_20)));
         // task listening for data packeges to send up the line (reverse USB ;)
         unwrap!(spawner.spawn(ybsu::logger_task(p.USB, log::LevelFilter::Info)));
         unwrap!(spawner.spawn(ybsu::task()));
@@ -93,13 +99,13 @@ fn init() -> ! {
     });
 }
 
-use mcu::gpio::Input;
+/*`use mcu::gpio::Input;
 use mcu::gpio::Pull;
-use mcu::peripherals::{PIN_20, PIN_21, PIN_22, PIN_8, PIN_9};
+use mcu::peripherals::{PIN_20, PIN_21, PIN_22, PIN_8, PIN_9};*/
 
-#[embassy_executor::task]
+/*#[embassy_executor::task]
 async fn moi_task(
-    pin_0: Peri<'static, PIN_21>, 
+    pin_0: Peri<'static, PIN_21>,
     pin_1: Peri<'static, PIN_22>,
     pin_2: Peri<'static, PIN_8>,
     pin_3: Peri<'static, PIN_9>)
@@ -115,7 +121,7 @@ async fn moi_task(
 async fn ybtn_20(pin: Peri<'static, PIN_20>) {
     let pin = Input::new(pin, Pull::Up);
     yuii::btn::inner_task(pin).await;
-}
+}*/
 
 #[embassy_executor::task]
 async fn control_task() {

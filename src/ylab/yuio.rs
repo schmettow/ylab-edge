@@ -1,6 +1,6 @@
 pub use super::*;
 
-pub mod led {
+/*pub mod led {
     // LED control
     use super::*;
     use embassy_rp::gpio::{AnyPin, Level, Output};
@@ -47,9 +47,9 @@ pub mod led {
             }
         }
     }
-}
+}*/
 
-pub mod disp {
+/*pub mod disp {
     use super::*;
     use ylab_lib::ybus::SharedI2cDevice;
     //use mcu::i2c;
@@ -109,4 +109,4 @@ pub mod disp {
             }
         }
     }
-}
+}*/

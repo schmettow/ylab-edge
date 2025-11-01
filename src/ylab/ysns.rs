@@ -3,7 +3,7 @@ pub use crate::*;
 pub use mcu::i2c::Instance as I2cInstance;
 pub use ylab_lib::ybus::SharedI2cDevice;
 pub use ylab_lib::ydata::Sample;
-pub use yuio::disp::TEXT as DISP;
+pub use yll::yuio::disp::TEXT as DISP;
 
 
 #[derive(Debug)]
@@ -14,7 +14,7 @@ pub enum YsenseErr {
 }
 
 
-pub mod moi {
+/*pub mod moi {
     use super::*;
     use mcu::gpio::{Input, Pull};
     use mcu::peripherals::{PIN_21, PIN_22};
@@ -90,7 +90,7 @@ pub mod moi {
             };
         }
     }
-}
+}*/
 
 pub mod adc {
 

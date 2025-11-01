@@ -11,7 +11,6 @@ use {defmt_rtt as _, panic_probe as _};
 
 use defmt::*;
 use embassy_executor::Executor;
-use embassy_rp::gpio::Output;
 use mcu::adc::Async;
 #[allow(unused_imports)]
 use mcu::gpio::Pin;
@@ -25,12 +24,14 @@ static mut CORE1_STACK: Stack<4096> = Stack::new();
 static EXECUTOR0: StaticCell<Executor> = StaticCell::new();
 static EXECUTOR1: StaticCell<Executor> = StaticCell::new();
 
+use ylab_lib as yll;
+use yll::ysns::moi;
+use yll::yuii::btn as ybtn;
+use yll::yuio::led as yled;
+use ylab::task::{moi_task, btn20_task, led_task};
 use ylab::ybus::SharedI2cDevice;
 use ylab::ysns::adc as yadc;
-use ylab::ysns::moi;
 use ylab::ytfk::bsu as ybsu;
-use ylab_lib::yuii::btn as ybtn;
-use ylab_lib::yuio::led as yled;
 use ylab::*;
 
 use ylab_lib::{Mutex, StaticCell};
@@ -85,9 +86,7 @@ fn init() -> ! {
         let executor1 = EXECUTOR1.init(Executor::new());
         executor1.run(|spawner| {
         	spawner.spawn(lsm6_multi_task(i2c11)).unwrap();
-         	spawner // BMI160
-             .spawn(bmi160_task(i2c01))
-             .unwrap();
+         	spawner .spawn(bmi160_task(i2c01)).unwrap();
 
         })
     });
@@ -97,12 +96,11 @@ fn init() -> ! {
     executor0.run(|spawner| {
     	// MOI task
         spawner
-            .spawn(moi::task(
+            .spawn(moi_task(
                 p.PIN_21.into(),
                 p.PIN_22.into(),
                 p.PIN_8.into(),
                 p.PIN_9.into(),
-                0,
             ))
             .unwrap();
         // ADC task
@@ -116,7 +114,7 @@ fn init() -> ! {
         let led = Output::new(p.PIN_25, Level::Low);
         unwrap!(spawner.spawn(led_task(led)));
         // task for listening to button presses.
-        unwrap!(spawner.spawn(ybtn_20(p.PIN_20.into())));
+        unwrap!(spawner.spawn(btn20_task(p.PIN_20.into())));
         // task listening for data packeges to send up the line (reverse USB ;)
         unwrap!(spawner.spawn(ybsu::logger_task(p.USB, LOG_LEVEL)));
         unwrap!(spawner.spawn(ybsu::task()));
@@ -126,10 +124,11 @@ fn init() -> ! {
 }
 
 // LED task
-#[embassy_executor::task]
+/*#[embassy_executor::task]
 async fn led_task(led: Output<'static>){
 	ylab_lib::yuio::led::task(led).await
 }
+*/
 
 // LSM6 task
 #[embassy_executor::task]
@@ -143,16 +142,12 @@ async fn bmi160_task(i2c: SharedI2c0) {
 }
 
 // Button task
-//use embassy_rp::peripherals::PIN_20;
-use crate::mcu::gpio::Input;
-use crate::mcu::gpio::Pull;
-use crate::mcu::peripherals::PIN_20;
-
+/*use embassy_rp::peripherals::PIN_20;
 #[embassy_executor::task]
 async fn ybtn_20(pin: Peri<'static, PIN_20>) {
     let pin = Input::new(pin, Pull::Up);
     yuii::btn::inner_task(pin).await;
-}
+}*/
 
 #[embassy_executor::task]
 async fn control_task() {
