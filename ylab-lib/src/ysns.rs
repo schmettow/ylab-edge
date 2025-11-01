@@ -29,6 +29,52 @@ where R: core::fmt::Debug
 }
 
 
+pub mod yxz_tlv {
+    use super::*;
+    #[allow(unused)]
+    use tlv493d as tlv;
+
+    /* control channels */
+    pub static READY: AtomicBool = AtomicBool::new(false);
+    pub static RECORD: AtomicBool = AtomicBool::new(true);
+
+    const N: usize = 4;
+    pub type Measure = i16;
+    pub type Reading = [Measure; N];
+    pub type Sample = ydata::Sample<Measure, N>;
+
+
+    pub async fn inner_task<M, BUS>(i2c: SharedI2cDevice<'static, M, BUS>, hz: u64, sensory: u8, sink: YtfSender<'static>)
+    where
+    	M: SharedDeviceMutex,
+    	BUS: embedded_hal_async::i2c::I2c,
+    {
+        let address = 0x5E;
+        let mut sensor = tlv::Tlv493d::new_async(i2c, address, tlv::Mode::Master)
+            .await
+            .unwrap();
+        //DISP.signal([None, Some("BMI160 |==| I2C".try_into().unwrap()), None, None]);
+        let _: Reading = sensor.read_raw_async().await.unwrap();
+        sensor.configure(tlv::Mode::Fast, true).await.unwrap();
+        let mut ticker = Ticker::every(Duration::from_hz(hz));
+        READY.store(true, ORD);
+        loop {
+            ticker.next().await;
+            if RECORD.load(ORD) {
+                let reading: Reading = sensor.read_raw_async().await.unwrap();
+                let sample = Sample {
+                    time: Instant::now(),
+                    sensory: sensory,
+                    read: reading.into(),
+                };
+                sink.send(sample.into()).await;
+            };
+        }
+    }
+}
+
+
+
 pub mod yxz_bmi160 {
     use super::*;
     use bmi160::{AccelerometerPowerMode, Bmi160, GyroscopePowerMode, SensorSelector, SlaveAddr};

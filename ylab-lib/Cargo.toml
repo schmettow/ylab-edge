@@ -21,6 +21,7 @@ embedded-hal-async = "1.0.0"
 embedded-hal = "1.0.0"
 log = "0.4.28"
 
+tlv493d = { path = "../ylab-sensors/async-tlv493d-rs" }
 ssd1306 = { version = "0.10.0", features = ["async"] }
 scd4x = { version = "0.4.1", features = ["embedded-hal-async", "scd41"] }
 lsm6dsox = { path = "../ylab-sensors/async-lsm6dsox-rs" }
