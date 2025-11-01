@@ -12,6 +12,7 @@ members = [
     "ylab-sensors/async-ads1x1x-rs",
     "ylab-sensors/async-ads1299-rs",
     "ylab-sensors/async-tlv493d-rs",
+    "ylab-sensors/async-sen5x-rs",
 ]
 
 [patch.crates-io]
