@@ -29,6 +29,196 @@ where R: core::fmt::Debug
 }
 
 
+pub mod yxz_bmi160 {
+    use super::*;
+    use bmi160::{AccelerometerPowerMode, Bmi160, GyroscopePowerMode, SensorSelector, SlaveAddr};
+    //use embassy_rp::i2c::Instance;
+
+    /* control channels */
+    pub static READY: AtomicBool = AtomicBool::new(false);
+    pub static RECORD: AtomicBool = AtomicBool::new(true);
+
+    const N: usize = 6;
+    pub type Measure = f32;
+    pub type Reading = [Measure; N];
+    pub type Sample = ydata::Sample<Measure, N>;
+
+    pub async fn inner_task<M, BUS>(i2c: SharedI2cDevice<'static, M, BUS>, hz: u64, sensory: u8, sink: YtfSender<'static>)
+    where
+    	M: SharedDeviceMutex,
+    	BUS: embedded_hal_async::i2c::I2c,
+    {
+        let address = SlaveAddr::default();
+        let mut sensor = Bmi160::new_with_i2c(i2c, address);
+
+        sensor
+            .set_accel_power_mode(AccelerometerPowerMode::Normal)
+            .await
+            .unwrap();
+        sensor
+            .set_gyro_power_mode(GyroscopePowerMode::Normal)
+            .await
+            .unwrap();
+        let mut ticker = Ticker::every(Duration::from_hz(hz));
+        READY.store(true, ORD);
+        loop {
+            ticker.next().await;
+            if RECORD.load(ORD) {
+                let data = sensor
+                    .data(SensorSelector::new().accel().gyro())
+                    .await
+                    .unwrap();
+                let acc = data.accel.unwrap();
+                let gyr = data.gyro.unwrap();
+                let reading = [
+                    acc.x.into(),
+                    acc.y.into(),
+                    acc.z.into(),
+                    gyr.x.into(),
+                    gyr.y.into(),
+                    gyr.z.into(),
+                ];
+                let sample = Sample {
+                    time: Instant::now(),
+                    sensory: sensory,
+                    read: reading.into(),
+                };
+                sink.send(sample.into()).await;
+            };
+        }
+    }
+
+}
+
+
+
+pub mod ads1115 {
+    use super::*;
+    use ads1x1x::{channel, DataRate16Bit as DataRate};
+    use ads1x1x::{Ads1x1x, TargetAddr};
+
+    // Data
+
+    pub const N: usize = 4;
+    pub type Measure = f32;
+    pub type Reading = [Measure; N];
+    pub type Sample = ydata::Sample<Measure, N>;
+    /* control channels */
+    pub static READY: AtomicBool = AtomicBool::new(false);
+    pub static RECORD: AtomicBool = AtomicBool::new(false);
+
+    pub async fn inner_task<M, BUS>(i2c: SharedI2cDevice<'static, M, BUS>, hz: u64, sensory: u8, sink: YtfSender<'static>)
+    where
+    	M: SharedDeviceMutex,
+    	BUS: embedded_hal_async::i2c::I2c,
+    {
+        let address = TargetAddr::default();
+        let mut ads = Ads1x1x::new_ads1115(i2c, address).await;
+        ads.set_data_rate(DataRate::Sps860).await.unwrap();
+        let mut ticker = Ticker::every(Duration::from_hz(hz));
+        READY.store(true, ORD);
+        loop {
+            if RECORD.load(ORD) {
+                let reading: Reading = [
+                    ads.read(channel::SingleA0).await.unwrap().into(),
+                    ads.read(channel::SingleA1).await.unwrap().into(),
+                    ads.read(channel::SingleA2).await.unwrap().into(),
+                    ads.read(channel::SingleA3).await.unwrap().into(),
+                ];
+                let sample = Sample {
+                    sensory: sensory,
+                    time: Instant::now(),
+                    read: reading,
+                };
+                sink.send(sample.into()).await;
+                log::debug!("Yxz read");
+            };
+            ticker.next().await;
+        }
+    }
+}
+
+
+
+
+pub mod yco2 {
+    use super::*;
+    //use mcu::peripherals::I2C1 as ThisI2C;
+    use scd4x;
+
+    /* control channels */
+    pub static READY: AtomicBool = AtomicBool::new(false);
+    pub static SAMPLE: AtomicBool = AtomicBool::new(true);
+
+    // Generic result
+    const N: usize = 3;
+    pub type Measure = f32;
+    pub type Reading = [Measure; N];
+    pub type Sample = ydata::Sample<Measure, N>;
+
+    //#[embassy_executor::task]
+
+    pub async fn task<M, B>(i2c: SharedI2cDevice<'_, M, B>, sensory: u8, sink: ytfk::YtfSender<'_>)
+    where
+    	M: SharedDeviceMutex,
+     	B: embedded_hal_async::i2c::I2c,
+    {
+        let mut sensor = scd4x::Scd4xAsync::new(i2c, time::Delay); // <-- this makes it sybc or async
+                                                              //sensor.wake_up(); <---- This fails
+        log::debug!("Starting up SCD41");
+        match sensor.stop_periodic_measurement().await {
+            Ok(_) => {}
+            Err(_) => {
+                log::debug!("Stopping periodic measurements failed.")
+            }
+        }
+
+        match sensor.reinit().await {
+            Ok(_) => {
+                READY.store(true, ORD);
+            }
+            Err(_) => {
+                log::debug!("SCD41 reinit failed.")
+            }
+        }
+
+        let mut ticker = Ticker::every(Duration::from_secs(5));
+        let mut sample: Sample;
+
+        loop {
+            if SAMPLE.load(ORD) {
+                log::debug!("SCD41 active");
+                match sensor.measurement().await {
+                    Err(_) => {
+                        log::debug!("SCD41 single shot failed");
+                    }
+                    Ok(_) => {
+                        log::debug!("SCD41 read");
+                        ticker.next().await;
+                        match sensor.measurement().await {
+                            Err(_) => {
+                                log::debug!("SCD41 read failed.");
+                            }
+                            Ok(raw) => {
+                                let reading: Reading =
+                                    [raw.co2 as f32, raw.humidity as f32, raw.temperature as f32];
+                                sample = Sample {
+                                    sensory: sensory,
+                                    time: Instant::now(),
+                                    read: reading,
+                                };
+                                sink.send(sample.into()).await;
+                            }
+                        };
+                    }
+                };
+            };
+        }
+    }
+}
+
+
+
 pub mod sen_five {
     use super::*;
     const N: usize = 8;
