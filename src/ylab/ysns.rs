@@ -386,9 +386,9 @@ pub mod adc {
         }
     }
 }*/
-/// ## BMI Acceleration Sensor
+/*/// ## BMI Acceleration Sensor
 
-/*pub mod yxz_bmi160 {
+pub mod yxz_bmi160 {
     use super::*;
     #[allow(unused)]
     use bmi160::{AccelerometerPowerMode, Bmi160, GyroscopePowerMode, SensorSelector, SlaveAddr};
@@ -463,7 +463,7 @@ pub mod adc {
 
 }*/
 
-/// ## TLV Hall effect
+/*/// ## TLV Hall effect
 
 pub mod yxz_tlv {
     use super::*;
@@ -516,7 +516,7 @@ pub mod yxz_tlv {
             };
         }
     }
-}
+}*/
 
 /*pub mod yirt_max {
     use super::*;
