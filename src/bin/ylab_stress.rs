@@ -12,17 +12,19 @@ static mut CORE1_STACK: Stack<4096> = Stack::new();
 static EXECUTOR0: StaticCell<Executor> = StaticCell::new();
 static EXECUTOR1: StaticCell<Executor> = StaticCell::new();
 
-use ylab_lib::{Mutex, StaticCell};
+use ylab_lib as yll;
+use yll::{Mutex, StaticCell};
+use yll::ysns::moi;
+use yll::ysns::yco2;
+use yll::yuii::btn as ybtn;
+use yll::yuio::yled;
 
 use ydsp::TEXT as DISP;
 use ylab::*;
 use ysns::adc as yadc;
-use ysns::moi;
-use ysns::yco2;
 use ytfk::bsu as ybsu;
-use ylab_lib::yuii::btn as ybtn;
 use yuio::disp as ydsp;
-use yuio::led as yled;
+//use yuio::led as yled;
 
 #[derive(
     Debug, // used as fmt
@@ -61,8 +63,10 @@ fn init() -> ! {
     let config = Config::default();
     static I2C_BUS_0: StaticCell<SharedI2cBus<I2C0>> = StaticCell::new();
     let i2c0 = i2c::I2c::new_async(p.I2C0, p.PIN_1, p.PIN_0, Irqs, config);
-    #[allow(unused_variables)]
     let i2c_bus_0 = I2C_BUS_0.init(Mutex::new(i2c0));
+    #[allow(unused_variables)]
+    let i2c01 = SharedI2cDevice::new(i2c_bus_0);
+
     static I2C_BUS_1: StaticCell<SharedI2cBus<I2C1>> = StaticCell::new();
     let i2c1 = i2c::I2c::new_async(p.I2C1, p.PIN_3, p.PIN_2, Irqs, config);
     #[allow(unused_variables)]
@@ -72,7 +76,7 @@ fn init() -> ! {
         let executor1 = EXECUTOR1.init(Executor::new());
         executor1.run(|spawner| {
             spawner // CO2 (scd4)
-                .spawn(ylab::ysns::yco2::task_0(i2c_bus_0, 2))
+                .spawn(co2_task(i2c01))
                 .unwrap();
             unwrap!(spawner.spawn(ylab::ysns::ads1115::task_1(i2c_bus_1, 4, 3)));
             unwrap!(spawner.spawn(yuio::disp::task_1(i2c_bus_1)));
@@ -119,12 +123,17 @@ async fn ybtn_20(pin: Peri<'static, PIN_20>) {
     yuii::btn::inner_task(pin).await;
 }
 
+// LSM6 task
+#[embassy_executor::task]
+async fn co2_task(i2c: SharedI2c0) {
+	yco2::task(i2c, 3, ybsu::SINK.sender()).await;
+}
+
 #[embassy_executor::task]
 async fn control_task() {
     let mut state = AppState::Record;
     moi::RECORD.store(true, ORD);
     yadc::RECORD.store(true, ORD);
-    yco2::RECORD.store(true, ORD);
 
     yled::LED.signal(yled::State::Steady);
     loop {
@@ -146,7 +155,7 @@ async fn control_task() {
                     yled::LED.signal(yled::State::Vibrate);
                     moi::RECORD.store(false, ORD);
                     yadc::RECORD.store(false, ORD);
-                    yco2::RECORD.store(false, ORD);
+                    //yco2::RECORD.store(false, ORD);
                     DISP.signal([Some("New".try_into().unwrap()), None, None, None]);
                 }
                 AppState::Ready => {
@@ -154,7 +163,7 @@ async fn control_task() {
                     yled::LED.signal(yled::State::Blink);
                     moi::RECORD.store(false, ORD);
                     yadc::RECORD.store(false, ORD);
-                    yco2::RECORD.store(false, ORD);
+                    //yco2::RECORD.store(false, ORD);
                     DISP.signal([Some("Ready".try_into().unwrap()), None, None, None]);
                 }
                 AppState::Record => {
@@ -162,7 +171,7 @@ async fn control_task() {
                     moi::RECORD.store(true, ORD);
                     yled::LED.signal(yled::State::Steady);
                     yadc::RECORD.store(true, ORD);
-                    yco2::RECORD.store(true, ORD);
+                    //yco2::RECORD.store(true, ORD);
                     DISP.signal([Some("Record".try_into().unwrap()), None, None, None]);
                 }
             }
