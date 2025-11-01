@@ -152,7 +152,7 @@ pub mod adc {
 }
 
 /* ADS1115 Sensor I2C1 */
-pub mod ads1115 {
+/*pub mod ads1115 {
     use super::*;
     use ads1x1x::{channel, DataRate16Bit as DataRate};
     use ads1x1x::{Ads1x1x, TargetAddr};
@@ -206,8 +206,8 @@ pub mod ads1115 {
             ticker.next().await;
         }
     }
-}
-pub mod yxz_lsm6 {
+}*/
+/*pub mod yxz_lsm6 {
 
     use super::*;
     //use accelerometer::Accelerometer;
@@ -385,10 +385,10 @@ pub mod yxz_lsm6 {
             }
         }
     }
-}
+}*/
 /// ## BMI Acceleration Sensor
 
-pub mod yxz_bmi160 {
+/*pub mod yxz_bmi160 {
     use super::*;
     #[allow(unused)]
     use bmi160::{AccelerometerPowerMode, Bmi160, GyroscopePowerMode, SensorSelector, SlaveAddr};
@@ -461,7 +461,7 @@ pub mod yxz_bmi160 {
         }
     }
 
-}
+}*/
 
 /// ## TLV Hall effect
 
@@ -610,7 +610,7 @@ pub mod yxz_tlv {
     }
 }*/
 
-pub mod yco2 {
+/*pub mod yco2 {
     use super::*;
 
     /* control channels */
@@ -692,4 +692,4 @@ pub mod yco2 {
             };
         }
     }
-}
+}*/

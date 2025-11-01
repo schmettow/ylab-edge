@@ -71,6 +71,7 @@ fn init() -> ! {
     static I2C_BUS_0: StaticCell<SharedI2cBus<I2C0>> = StaticCell::new();
     let i2c0 = i2c::I2c::new_async(p.I2C0, p.PIN_1, p.PIN_0, Irqs, config);
     let i2c_bus_0 = I2C_BUS_0.init(Mutex::new(i2c0));
+    let i2c01 = SharedI2cDevice::new(i2c_bus_0);
 
     // IC2 Bus 1
     static I2C_BUS_1: StaticCell<SharedI2cBus<I2C1>> = StaticCell::new();
@@ -84,8 +85,8 @@ fn init() -> ! {
         let executor1 = EXECUTOR1.init(Executor::new());
         executor1.run(|spawner| {
         	spawner.spawn(lsm6_multi_task(i2c11)).unwrap();
-        	spawner // BMI160
-             .spawn(ylab::ysns::yxz_bmi160::task_0(i2c_bus_0, 101 as u64, 2))
+         	spawner // BMI160
+             .spawn(bmi160_task(i2c01))
              .unwrap();
 
         })
@@ -134,6 +135,11 @@ async fn led_task(led: Output<'static>){
 #[embassy_executor::task]
 async fn lsm6_multi_task(i2c: SharedI2c1) {
 	lsm6::inner_multi_task(i2c, 6, 100, 2, false, ytfk::bsu::SINK.sender()).await;
+}
+
+#[embassy_executor::task]
+async fn bmi160_task(i2c: SharedI2c0) {
+	ylab_lib::ysns::yxz_bmi160::inner_task(i2c, 203, 4, ytfk::bsu::SINK.sender()).await;
 }
 
 // Button task
