@@ -17,14 +17,12 @@ cortex-m-rt = "0.7.5"
 defmt = "1.0.1"
 defmt-rtt = "1.1.0"
 panic-probe = { version = "1.0.0", features = ["print-defmt"] }
-
 embassy-executor = { version = "0.9.1", features = [
     "arch-cortex-m",
     "executor-thread",
     "executor-interrupt",
     "defmt",
 ] }
-
 embassy-rp = { version = "0.8.0", features = [
     "defmt",
     "unstable-pac",
@@ -32,20 +30,6 @@ embassy-rp = { version = "0.8.0", features = [
     "critical-section-impl",
     "rp2040",
 ] }
-embassy-usb = { version = "0.5.1", features = ["defmt"] }
-embassy-futures = { version = "0.1.2" }
 embassy-usb-logger = { version = "0.5.1" }
-
-fixed = "1.29"
-fixed-macro = "1.2.0"
-smart-leds = "0.4.0"
-embedded-hal = { version = "1.0.0" }
-
-itoa = "1.0.15"
-heapless = "0.9.1"
-nb = "1.1.0"
 log = "0.4.28"
-
-
-embedded-hal-async = { version = "1.0.0" }
 embassy-sync = "0.7.2"

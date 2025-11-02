@@ -28,26 +28,10 @@ embassy-stm32 = { version = "0.4.0", features = [
     "time-driver-any",
     "exti",
 ] }
-embassy-embedded-hal = { version = "0.5.0", features = ["defmt"] }
 embassy-executor = { version = "0.9.1", features = [
     "arch-cortex-m",
     "executor-thread",
     "executor-interrupt",
     "defmt",
 ] }
-embassy-futures = { version = "0.1.2" }
 embassy-sync = { version = "0.7.2", features = ["defmt"] }
-embassy-time = { version = "0.5.0", features = [
-    "defmt",
-    "defmt-timestamp-uptime",
-] }
-log = "0.4"
-
-static_cell = "2.1.1"
-fixed = "1.29.0"
-fixed-macro = "1.2.0"
-heapless = "0.9.1"
-nb = "1.1.0"
-ryu = "1.0.20"
-embedded-hal-async = "1.0.0"
-embedded-hal = "1.0.0"
