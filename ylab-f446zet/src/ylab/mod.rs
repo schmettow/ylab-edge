@@ -37,7 +37,6 @@ pub type SharedI2cDevice = I2cDevice<'static, SharedBusMutexType, I2c<'static, A
 
 pub mod ysns; // Ylab sensors
 pub mod ytfk;
+pub mod task;
 //pub mod yuii; // YLab UI Input
 //pub mod yuio; // YLab UI Output // YLab transfer formats & kodices
-
-
