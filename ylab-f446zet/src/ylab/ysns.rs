@@ -32,7 +32,7 @@ pub mod adc {
         hz: u64,
         sensory: u8,
     ) {
-        println!("Starting ADC task");
+        //println!("Starting ADC task");
         //let state: Atomic<super::State> = Atomic::new(State::Offline);
         let mut ticker = Ticker::every(Duration::from_hz(hz));
         let mut _vrefint = adc.enable_vrefint();

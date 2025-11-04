@@ -6,9 +6,10 @@ use embassy_stm32 as mcu;
 use ylab::*;
 use ylab::ysns::adc as yadc;
 use ylab::ytfk::bsu as ybsu;
+use ylab::task;
 
-use ylab_lib as yll;
-use yll::ysns::moi;
+//use ylab_lib as yll;
+//use yll::ysns::moi;
 
 #[derive(Debug,  // used as fmt
     Clone, Copy, // because next_state
@@ -34,17 +35,16 @@ use embassy_executor::Spawner;
 async fn main(spawner: Spawner) {
     let p = mcu::init(Default::default());
     let mut config = Config::default();
-    config.baudrate = 2000;
-    let usart = p.USART2;
-    let tx = p.PA3;
-    let rx = p.PA2;
-    //let usart_dma = p.DMA1_CH6;
-    let usart = Uart::new(usart, tx, rx, Irqs, p.DMA1_CH6, p.DMA1_CH5, config);
-    match usart {
-        Ok(usart) => spawner.spawn(ybsu::task(usart)).unwrap(),
-        Err(_)  => {println!("USART connection failed")},
+    config.baudrate = 2_000_000;
+    let usart = Uart::new(p.USART3, p.PD9, p.PD8, Irqs, p.DMA1_CH3, p.DMA1_CH1, config).unwrap();
+    match spawner.spawn(ybsu::task(usart)) {
+        Ok(_) => {println!("USART OK")},
+        Err(e)  => {println!("USART connection failed: {:?}", e)},
     }
-    spawner.spawn(control_task()).unwrap();
+    match spawner.spawn(control_task()){
+    	Ok(_) => println!("Control task OK"),
+     	Err(e) => println!("Control task failed: {:?}", e),
+    };
     // MOI
     let moi_0
         = ExtiInput::new(p.PA10,  p.EXTI10, ylab::Pull::Down,);
@@ -54,15 +54,21 @@ async fn main(spawner: Spawner) {
         = ExtiInput::new(p.PD0,  p.EXTI0, ylab::Pull::Down,);
     let moi_4
         = ExtiInput::new(p.PD1, p.EXTI1, ylab::Pull::Down);
-    //spawner.spawn(ysns::moi::task(moi_0, moi_1, 0)).unwrap();
-    spawner.spawn(moi_task(moi_0, moi_1, moi_3, moi_4)).unwrap();
+
+    match spawner.spawn(task::moi_task(moi_0, moi_1, moi_3, moi_4)) {
+    	Ok(_) => println!("MOI task OK"),
+   		Err(e) => println!("MOI task failed: {:?}", e),
+    }
 
     //ADC
     //let mut delay = Delay;
     let adc1 = adc::Adc::new(p.ADC1);
-    spawner.spawn(yadc::adcbank_1(adc1,
+    match spawner.spawn(yadc::adcbank_1(adc1,
                                 (p.PA0, p.PA1, p.PA4, p.PB0, p.PC1, p.PC0, p.PC3, p.PC2),
-                                197, 1)).unwrap();
+                                3, 1)) {
+                                	Ok(_) => println!("ADC task OK"),
+                              		Err(e) => println!("ADC task failed: {:?}", e),
+                                }
 }
 
 
@@ -70,7 +76,7 @@ async fn main(spawner: Spawner) {
 use mcu::gpio::Pull;
 use mcu::peripherals::{PD0, PD1, PD2, PD3};*/
 
-#[embassy_executor::task]
+/*#[embassy_executor::task]
 async fn moi_task(
     pin_0: ExtiInput<'static>,
     pin_1: ExtiInput<'static>,
@@ -78,7 +84,7 @@ async fn moi_task(
     pin_3: ExtiInput<'static>)
     {
 	moi::inner_task(pin_0, pin_1, pin_2, pin_3, 0, ylab::ytfk::bsu::SINK.sender()).await;
-}
+}*/
 
 
 #[embassy_executor::task]

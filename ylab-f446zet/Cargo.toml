@@ -3,7 +3,7 @@ edition = "2024"
 name = "ylab-edge-pro"
 version = "0.1.0"
 license = "MIT OR Apache-2.0"
-resolver = "2"
+#resolver = "2"
 
 [lib]
 name = "ylab"
@@ -35,3 +35,4 @@ embassy-executor = { version = "0.9.1", features = [
     "defmt",
 ] }
 embassy-sync = { version = "0.7.2", features = ["defmt"] }
+embassy-embedded-hal = { version = "0.5.0", features = ["defmt"] }

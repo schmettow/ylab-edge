@@ -16,7 +16,7 @@ use ylab_lib as yll;
 use yll::ysns::moi;
 use yll::yuii::btn as ybtn;
 use yll::yuio::led as yled;
-use ylab::task::{moi_task, btn20_task, led_task};
+use ylab::task::{moi_task, btn20_task, led_task, display_task_0, ads_task_1, lsm6_task_0};
 use yll::ysns::yco2;
 //use yll::yuii::btn as ybtn;
 //use yll::yuio::led as yled;
@@ -50,6 +50,7 @@ bind_interrupts!(struct Irqs {
     I2C1_IRQ => i2c::InterruptHandler<I2C1>;
     ADC_IRQ_FIFO => adc::InterruptHandler;
 });
+use ylab::task;
 
 use defmt::*;
 use embassy_executor::Executor;
@@ -80,10 +81,17 @@ fn init() -> ! {
     spawn_core1(p.CORE1, unsafe { &mut CORE1_STACK }, move || {
         let executor1 = EXECUTOR1.init(Executor::new());
         executor1.run(|spawner| {
-            spawner // CO2 (scd4)
-                .spawn(co2_task(i2c01))
-                .unwrap();
-            unwrap!(spawner.spawn(ads_task(i2c11)));
+        	// CO2 (scd4)
+            //spawner.spawn(co2_task(i2c01)).unwrap();
+            match spawner.spawn(lsm6_task_0(i2c01, 3, 2)) {
+            	Ok(_) => {},
+             	Err(e) => debug!("Lsm6 task failed: {:?}", e),
+            }
+            match spawner.spawn(ads_task_1(i2c11, 5, 3)) {
+            	Ok(_) => {},
+             	Err(e) => debug!("Lsm6 task failed: {:?}", e),
+            }
+            //unwrap!(spawner.spawn(ads_task_1(i2c11, 5, 3)));
             //unwrap!(spawner.spawn(yuio::disp::task_1(i2c_bus_1)));
         })
     });
@@ -94,7 +102,7 @@ fn init() -> ! {
         use mcu::gpio::{Output, Level};
         let led = Output::new(p.PIN_25, Level::Low);
         unwrap!(spawner.spawn(led_task(led)));
-        unwrap!(spawner.spawn(display_task(i2c02)));
+        unwrap!(spawner.spawn(display_task_0(i2c02)));
         // listening to button presses.
         unwrap!(spawner.spawn(btn20_task(p.PIN_20.into())));
         //  listening for data packeges to send up the line (reverse USB ;)
@@ -109,6 +117,7 @@ fn init() -> ! {
                 p.PIN_22.into(),
                 p.PIN_8.into(),
                 p.PIN_9.into(),
+                0
             ))
             .unwrap();
         // ADC task
@@ -141,21 +150,6 @@ async fn ybtn_20(pin: Peri<'static, PIN_20>) {
     let pin = Input::new(pin, Pull::Up);
     yuii::btn::inner_task(pin).await;
 }*/
-
-#[embassy_executor::task]
-async fn ads_task(i2c: SharedI2c1) {
-	yll::ysns::ads1115::inner_task(i2c, 101, 3, ybsu::SINK.sender()).await;
-}
-
-#[embassy_executor::task]
-async fn co2_task(i2c: SharedI2c0) {
-	yco2::task(i2c, 3, ybsu::SINK.sender()).await;
-}
-
-#[embassy_executor::task]
-async fn display_task(i2c: SharedI2c0) {
-	yll::yuio::disp::task(i2c).await;
-}
 
 #[embassy_executor::task]
 async fn control_task() {

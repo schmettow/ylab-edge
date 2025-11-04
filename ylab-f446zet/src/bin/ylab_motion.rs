@@ -38,58 +38,75 @@ async fn main(spawner: Spawner) {
     let p = mcu::init(Default::default());
     let mut config = Config::default();
     config.baudrate = 2_000_000;
-    let usart = p.USART2;
-    let tx = p.PA3;
-    let rx = p.PA2;
-
-    let usart = Uart::new(usart, tx, rx, Irqs, p.DMA1_CH6, p.DMA1_CH5, config);
-    match usart {
-        Ok(usart) => spawner.spawn(ybsu::task(usart)).unwrap(),
-        Err(_)  => {log::debug!("USART connection failed")},
+    let usart = Uart::new(p.USART3, p.PD9, p.PD8, Irqs, p.DMA1_CH3, p.DMA1_CH1, config).unwrap();
+    match spawner.spawn(ybsu::task(usart)) {
+        Ok(_) => {println!("USART OK")},
+        Err(e)  => {println!("USART connection failed: {:?}", e)},
     }
-    spawner.spawn(control_task()).unwrap();
-
+    match spawner.spawn(control_task()){
+    	Ok(_) => println!("Control task OK"),
+     	Err(e) => println!("Control task failed: {:?}", e),
+    };
     // MOI
     let moi_0
         = ExtiInput::new(p.PA10,  p.EXTI10, ylab::Pull::Down,);
     let moi_1
         = ExtiInput::new(p.PB3, p.EXTI3, ylab::Pull::Down);
-    let moi_2
-        = ExtiInput::new(p.PD0,  p.EXTI0, ylab::Pull::Down,);
     let moi_3
+        = ExtiInput::new(p.PD0,  p.EXTI0, ylab::Pull::Down,);
+    let moi_4
         = ExtiInput::new(p.PD1, p.EXTI1, ylab::Pull::Down);
-    //spawner.spawn(moi_task(moi_0, moi_1, moi_3, moi_4)).unwrap();
-    spawner.spawn(
-    	task::moi_task(moi_0, moi_1, moi_2, moi_3)
-    ).unwrap();
 
-
-
+    match spawner.spawn(task::moi_task(moi_0, moi_1, moi_3, moi_4)) {
+    	Ok(_) => println!("MOI task OK"),
+   		Err(e) => println!("MOI task failed: {:?}", e),
+    }
     //ADC
     let adc1 = adc::Adc::new(p.ADC1);
-    spawner.spawn(yadc::adcbank_1(adc1,
+    /*match spawner.spawn(yadc::adcbank_1(adc1,
                                 (p.PA0, p.PA1, p.PA4, p.PB0, p.PC1, p.PC0, p.PC3, p.PC2),
-                                197, 1)).unwrap();
-
+                                2, 1)) {
+                                	Ok(_) => println!("ADC task OK"),
+                              		Err(e) => println!("ADC task failed: {:?}", e),
+                                }*/
 
     let i2c1 = I2c::new(p.I2C1, p.PB8, p.PB9, Irqs, p.DMA1_CH7, p.DMA1_CH0, Default::default());
     static I2C_BUS_1: StaticCell<SharedI2cBus> = StaticCell::new();
     let i2c_bus_1 = I2C_BUS_1.init(Mutex::new(i2c1));
     let i2c11 = SharedI2cDevice::new(i2c_bus_1);
-    spawner.spawn(task::lsm6_multi_task(i2c11)).unwrap();
+    let i2c12 = SharedI2cDevice::new(i2c_bus_1);
+    let i2c13 = SharedI2cDevice::new(i2c_bus_1);
+    let i2c14 = SharedI2cDevice::new(i2c_bus_1);
+
+    match spawner.spawn(task::co2_task(i2c14, 2)) {
+   		Ok(_) => println!("CO2 task OK"),
+ 		Err(e) => println!("CO2 task failed: {:?}", e),
+    }
+
+    /*match spawner.spawn(task::lsm6_task(i2c11, 5, 2)) {
+   		Ok(_) => println!("LSM task OK"),
+ 		Err(e) => println!("LSM task failed: {:?}", e),
+    }*/
+
+    match spawner.spawn(task::lsm6_multi_task(i2c11, 5, 2, 2)) {
+   		Ok(_) => println!("Lsm6: multi task OK"),
+ 		Err(e) => println!("Lsm6 multi task failed: {:?}", e),
+    }
+
+    /*match spawner.spawn(task::ads_task(i2c12, 7, 3)) {
+   		Ok(_) => println!("ADS task OK"),
+ 		Err(e) => println!("ADS task failed: {:?}", e),
+    }*/
+
+    /*match spawner.spawn(task::bmi160_task(i2c13, 11, 4)) {
+   		Ok(_) => println!("Bmi160 task OK"),
+ 		Err(e) => println!("Bmi168 task failed: {:?}", e),
+    }*/
+
+
 
 
 }
-
-
-/*use mcu::gpio::Input;
-use mcu::gpio::Pull;
-use mcu::peripherals::{PD0, PD1, PD2, PD3};*/
-
-/*#[embassy_executor::task]
-async fn lsm6_multi_task(i2c: SharedI2cDevice) {
-    ylab_lib::ysns::::inner_multi_task(i2c, 6, 101, 2, false, ytfk::bsu::SINK.sender()).await;
-}*/
 
 
 #[embassy_executor::task]

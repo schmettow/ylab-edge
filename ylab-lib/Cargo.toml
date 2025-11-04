@@ -38,6 +38,7 @@ xca9548a = { git = "https://github.com/schmettow/async-xca9548a-rs" }
 ads1299 = { git = "https://github.com/schmettow/async-ads1299-rs" }
 async-sen5x = { git = "https://github.com/schmettow/async-sen5x-rs" }
 ads1x1x = { git = "https://github.com/schmettow/async-ads1x1x-rs" }
+defmt = "1.0.1"
 
 [features]
 default = []

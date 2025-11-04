@@ -56,16 +56,6 @@ fn init() -> ! {
     spawn_core1(p.CORE1, unsafe { &mut CORE1_STACK }, move || {
         let executor1 = EXECUTOR1.init(Executor::new());
         executor1.run(|spawner| {
-        	// MOI
-        	/*spawner.spawn(
-         		ylab::ysns::moi::task(
-	                p.PIN_21.into(),
-	                p.PIN_22.into(),
-	                p.PIN_8.into(),
-	                p.PIN_9.into(),
-	                0,
-            ))
-            .unwrap();*/
 
             spawner.spawn(
          		moi_task(
@@ -73,6 +63,7 @@ fn init() -> ! {
 	                p.PIN_22.into(),
 	                p.PIN_8.into(),
 	                p.PIN_9.into(),
+					0
             ))
             .unwrap();
 

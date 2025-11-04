@@ -2,8 +2,10 @@
 pub use super::*;
 pub use crate::ybus::{SharedI2cDevice, SharedDeviceMutex};
 use crate::ytfk::YtfSender;
+pub use defmt::println;
+pub use defmt::Format;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Format)]
 pub enum YsenseErr {
     Init,
     Read,
@@ -151,7 +153,7 @@ pub mod ads1115 {
     pub type Sample = ydata::Sample<Measure, N>;
     /* control channels */
     pub static READY: AtomicBool = AtomicBool::new(false);
-    pub static RECORD: AtomicBool = AtomicBool::new(false);
+    pub static RECORD: AtomicBool = AtomicBool::new(true);
 
     pub async fn inner_task<M, BUS>(i2c: SharedI2cDevice<'static, M, BUS>, hz: u64, sensory: u8, sink: YtfSender<'static>)
     where
@@ -163,6 +165,7 @@ pub mod ads1115 {
         ads.set_data_rate(DataRate::Sps860).await.unwrap();
         let mut ticker = Ticker::every(Duration::from_hz(hz));
         READY.store(true, ORD);
+        println!("ADS set");
         loop {
             if RECORD.load(ORD) {
                 let reading: Reading = [
@@ -177,7 +180,6 @@ pub mod ads1115 {
                     read: reading,
                 };
                 sink.send(sample.into()).await;
-                log::debug!("Yxz read");
             };
             ticker.next().await;
         }
@@ -210,52 +212,40 @@ pub mod yco2 {
      	B: embedded_hal_async::i2c::I2c,
     {
         let mut sensor = scd4x::Scd4xAsync::new(i2c, time::Delay); // <-- this makes it sybc or async
-                                                              //sensor.wake_up(); <---- This fails
-        log::debug!("Starting up SCD41");
+        sensor.wake_up().await; //<---- This fails
         match sensor.stop_periodic_measurement().await {
-            Ok(_) => {}
-            Err(_) => {
-                log::debug!("Stopping periodic measurements failed.")
-            }
+            Ok(_) => {println!("Stopped periodic measurements")},
+            Err(_) => {println!("Stopping periodic measurements failed.")}
         }
 
         match sensor.reinit().await {
-            Ok(_) => {
-                READY.store(true, ORD);
-            }
-            Err(_) => {
-                log::debug!("SCD41 reinit failed.")
-            }
+            Ok(_) => READY.store(true, ORD),
+            Err(_) => println!("SCD41 reinit failed.")
         }
+
+        let serial = sensor.serial_number().await.unwrap();
+        println!("CO2: serial {:?}", serial);
+        sensor.start_periodic_measurement().await.unwrap();
+        println!("CO2: Started periodic measurement");
 
         let mut ticker = Ticker::every(Duration::from_secs(5));
         let mut sample: Sample;
+        println!("SCD41 all set");
 
         loop {
             if SAMPLE.load(ORD) {
-                log::debug!("SCD41 active");
+                ticker.next().await;
                 match sensor.measurement().await {
-                    Err(_) => {
-                        log::debug!("SCD41 single shot failed");
-                    }
-                    Ok(_) => {
-                        log::debug!("SCD41 read");
-                        ticker.next().await;
-                        match sensor.measurement().await {
-                            Err(_) => {
-                                log::debug!("SCD41 read failed.");
-                            }
-                            Ok(raw) => {
-                                let reading: Reading =
-                                    [raw.co2 as f32, raw.humidity as f32, raw.temperature as f32];
-                                sample = Sample {
-                                    sensory: sensory,
-                                    time: Instant::now(),
-                                    read: reading,
-                                };
-                                sink.send(sample.into()).await;
-                            }
-                        };
+                    Err(_) => println!("CO2: read failed."),
+                    Ok(raw) => {
+                    	println!("CO2: read OK");
+                        let reading: Reading =
+                            [raw.co2 as f32, raw.humidity as f32, raw.temperature as f32];
+                        sample = Sample {
+                            sensory: sensory,
+                            time: Instant::now(),
+                            read: reading,};
+                        sink.send(sample.into()).await;
                     }
                 };
             };
@@ -360,7 +350,7 @@ pub mod sen_five {
         let mut sensor = Sensor::new(i2c, sensory, interval);
         match sensor.init().await {
             Err(_) => {
-                log::debug!("Sensor setup failed");
+                println!("Sensor setup failed");
                 return;
             } // connection error => end task
             Ok(_) => {}
@@ -368,7 +358,7 @@ pub mod sen_five {
 
         let mut ticker = Ticker::every(interval);
         READY.store(true, ORD);
-        log::debug!("Sen5 ready");
+        println!("Sen5 ready");
 
         loop {
             if SAMPLE.load(ORD) {
@@ -594,12 +584,16 @@ pub mod yxz_lsm6 {
                 .set_gyro_scale(GyroscopeScale::Dps250)
                 .await
                 .unwrap();
-            log::debug!("Yxz set");
+            self.sensor
+                .set_gyro_scale(GyroscopeScale::Dps250)
+                .await
+                .unwrap();
+            println!("LSM all set");
             Ok(())
         }
 
         pub async fn read(&mut self) -> Result<Reading, YsenseErr> {
-            log::debug!("Yxz get");
+            println!("LSM read");
             let accel = self.sensor.accel_norm().await.unwrap();
             let gyro = self.sensor.angular_rate().await.unwrap();
             let reading = [
@@ -630,18 +624,17 @@ pub mod yxz_lsm6 {
     where
     	M: SharedDeviceMutex,
      	B: AsyncI2c,
-
-    //async fn inner_task(i2c: &'static SharedI2cDevice, hz: u64, sensory: u8)
-    //where
-    //    I: I2cInstance,
     {
-        //let i2c = SharedI2cDevice::new(&i2c_bus);
         let mut sensor = Sensor::new(i2c, sensory, hz);
-        sensor.init().await.unwrap();
-        let mut ticker = Ticker::every(Duration::from_hz(hz));
-        sink.send(sensor.sample().await.unwrap().into()).await;
-        log::debug!("Yxz read");
-        ticker.next().await;
+        match sensor.init().await {
+        	Ok(_) => println!("Lsm6: init OK"),
+         	Err(e) => println!("Lsm6: read failed {:?}", e)
+        }
+        loop {
+	        let mut ticker = Ticker::every(Duration::from_hz(hz));
+	        sink.send(sensor.sample().await.unwrap().into()).await;
+	        ticker.next().await;
+        }
     }
 
     // MULTI Task
@@ -677,16 +670,20 @@ pub mod yxz_lsm6 {
                 continue;
             }
             if let Ok(_) = sens.init().await {
+            	println!("Sensor {} active", s);
                 sensor_active[s] = true;
             };
         }
-        for (s, sensor) in sensors.as_mut().into_iter().enumerate() {
-            if s >= n as usize {
-                continue;
-            }
-            if let Ok(s) = sensor.sample().await {
-                sink.send(s.into()).await;
-            }
+        loop {
+	        for (s, sensor) in sensors.as_mut().into_iter().enumerate() {
+	            if s >= n as usize {
+	                continue;
+	            }
+	            if let Ok(sam) = sensor.sample().await {
+	            	println!("Lsm6_{}: read OK", s);
+	                sink.send(sam.into()).await;
+	            }
+	        }
         }
     }
 }

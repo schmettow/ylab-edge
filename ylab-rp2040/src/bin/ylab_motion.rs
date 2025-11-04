@@ -28,7 +28,7 @@ use ylab_lib as yll;
 use yll::ysns::moi;
 use yll::yuii::btn as ybtn;
 use yll::yuio::led as yled;
-use ylab::task::{moi_task, btn20_task, led_task};
+use ylab::task::{moi_task, btn20_task, led_task, lsm6_multi_task, bmi160_task, ads1115_task};
 use ylab::ybus::SharedI2cDevice;
 use ylab::ysns::adc as yadc;
 use ylab::ytfk::bsu as ybsu;
@@ -85,8 +85,8 @@ fn init() -> ! {
     spawn_core1(p.CORE1, unsafe { &mut CORE1_STACK }, move || {
         let executor1 = EXECUTOR1.init(Executor::new());
         executor1.run(|spawner| {
-        	spawner.spawn(lsm6_multi_task(i2c11)).unwrap();
-         	spawner .spawn(bmi160_task(i2c01)).unwrap();
+        	//spawner.spawn(lsm6_multi_task(i2c11, 3, 3, 1)).unwrap();
+         	//spawner .spawn(ads1115_task(i2c01, 5, 2)).unwrap();
 
         })
     });
@@ -101,12 +101,13 @@ fn init() -> ! {
                 p.PIN_22.into(),
                 p.PIN_8.into(),
                 p.PIN_9.into(),
+                0
             ))
             .unwrap();
         // ADC task
         let adc0: adc::Adc<'_, Async> = adc::Adc::new(p.ADC, Irqs, adc::Config::default());
         spawner
-            .spawn(yadc::task(adc0, p.PIN_26, p.PIN_27, p.PIN_28, 101, 1))
+            .spawn(yadc::task(adc0, p.PIN_26, p.PIN_27, p.PIN_28, 0, 1))
             .unwrap();
 
         // task for controlling the led
@@ -131,7 +132,7 @@ async fn led_task(led: Output<'static>){
 */
 
 // LSM6 task
-#[embassy_executor::task]
+/*#[embassy_executor::task]
 async fn lsm6_multi_task(i2c: SharedI2c1) {
 	lsm6::inner_multi_task(i2c, 6, 100, 2, false, ytfk::bsu::SINK.sender()).await;
 }
@@ -139,7 +140,7 @@ async fn lsm6_multi_task(i2c: SharedI2c1) {
 #[embassy_executor::task]
 async fn bmi160_task(i2c: SharedI2c0) {
 	ylab_lib::ysns::yxz_bmi160::inner_task(i2c, 203, 4, ytfk::bsu::SINK.sender()).await;
-}
+}*/
 
 // Button task
 /*use embassy_rp::peripherals::PIN_20;

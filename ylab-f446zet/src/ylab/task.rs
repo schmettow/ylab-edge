@@ -1,12 +1,18 @@
-use crate::ytfk::bsu;
+use crate::ytfk::bsu::SINK;
 use crate::mcu::exti::ExtiInput;
+use crate::SharedI2cDevice;
 use ylab_lib as yll;
-use yll::ysns::moi;
+use yll::ysns::{moi, yxz_bmi160, yxz_lsm6, ads1115, yco2};
 
-#[embassy_executor::task]
-pub async fn lsm6_multi_task(i2c: crate::SharedI2cDevice) {
+/*#[embassy_executor::task]
+pub async fn lsm6_multi_task(i2c: SharedI2cDevice) {
     ylab_lib::ysns::yxz_lsm6::inner_multi_task(i2c, 6, 101, 2, false, bsu::SINK.sender()).await;
 }
+
+#[embassy_executor::task]
+pub async fn lsm6_task(i2c: SharedI2cDevice) {
+    ylab_lib::ysns::yxz_lsm6::task(i2c, 101, 2, bsu::SINK.sender()).await;
+}*/
 
 #[embassy_executor::task]
 pub async fn moi_task(
@@ -15,8 +21,39 @@ pub async fn moi_task(
     pin_2: ExtiInput<'static>,
     pin_3: ExtiInput<'static>)
     {
-	moi::inner_task(pin_0, pin_1, pin_2, pin_3, 0, bsu::SINK.sender()).await;
+	moi::inner_task(pin_0, pin_1, pin_2, pin_3, 0, SINK.sender()).await;
 }
+
+#[embassy_executor::task]
+pub async fn lsm6_multi_task(i2c: SharedI2cDevice, hz: u64, id: u8, n: u8) {
+	yxz_lsm6::inner_multi_task(i2c, n, hz, id, false, SINK.sender()).await;
+}
+
+#[embassy_executor::task]
+pub async fn lsm6_task(i2c: SharedI2cDevice, hz: u64, id: u8) {
+	yxz_lsm6::task(i2c, hz, id, SINK.sender()).await;
+}
+
+#[embassy_executor::task]
+pub async fn ads_task(i2c: SharedI2cDevice, hz: u64, id: u8) {
+	ads1115::inner_task(i2c, hz, id, SINK.sender()).await;
+}
+
+#[embassy_executor::task]
+pub async fn bmi160_task(i2c: SharedI2cDevice, hz: u64, id: u8) {
+	yxz_bmi160::inner_task(i2c, hz, id, SINK.sender()).await;
+}
+
+#[embassy_executor::task]
+pub async fn co2_task(i2c: SharedI2cDevice, id: u8) {
+	yco2::task(i2c, id, SINK.sender()).await;
+}
+
+#[embassy_executor::task]
+pub async fn display_task(i2c: SharedI2cDevice) {
+	yll::yuio::disp::task(i2c).await;
+}
+
 
 /*#[macro_export]
 macro_rules! init_usart {

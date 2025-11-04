@@ -4,6 +4,7 @@
 use ylab::*;
 use ylab::mcu;
 use ylab::ysns::adc as yadc;
+use ylab::ytfk::bsu as ybsu;
 use ylab_lib::ysns::moi;
 
 
@@ -15,7 +16,7 @@ enum AppState {Send}
 
 use mcu::adc;
 use mcu::exti::ExtiInput;
-use ylab::ytfk::bsu;
+//use ylab::ytfk::bsu;
 use mcu::usart::{Config, Uart};
 use mcu::i2c;
 use mcu::{bind_interrupts, peripherals, usart};
@@ -35,14 +36,10 @@ async fn main(spawner: Spawner) {
 
     let mut config = Config::default();
     config.baudrate = 2_000_000;
-    let usart = p.USART2;
-    let tx = p.PA3;
-    let rx = p.PA2;
-    //let usart_dma = p.DMA1_CH6;
-    let usart = Uart::new(usart, tx, rx, Irqs, p.DMA1_CH6, p.DMA1_CH5, config);
-    match usart {
-        Ok(usart) => spawner.spawn(bsu::task(usart)).unwrap(),
-        Err(_)  => {log::debug!("USART connection failed")},
+    let usart = Uart::new(p.USART3, p.PD9, p.PD8, Irqs, p.DMA1_CH3, p.DMA1_CH1, config).unwrap();
+    match spawner.spawn(ybsu::task(usart)) {
+        Ok(_) => {println!("USART OK")},
+        Err(e)  => {println!("USART connection failed: {:?}", e)},
     }
     spawner.spawn(control_task()).unwrap();
 
