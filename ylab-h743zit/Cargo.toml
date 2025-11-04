@@ -1,6 +1,6 @@
 [package]
 edition = "2024"
-name = "ylab-edge-pro"
+name = "ylab-edge-neuro"
 version = "0.1.0"
 license = "MIT OR Apache-2.0"
 #resolver = "2"
@@ -23,7 +23,7 @@ panic-probe = { version = "1.0.0", features = ["print-defmt"] }
 
 embassy-stm32 = { version = "0.4.0", features = [
     "defmt",
-    "stm32f446ze",
+    "stm32h742zi",
     "memory-x",
     "time-driver-any",
     "exti",
