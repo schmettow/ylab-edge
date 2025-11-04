@@ -1,14 +1,12 @@
 #![no_std]
 #![no_main]
 
-const BAUD: u32 = 2_000_000;
-
 use ylab_lib as yll;
 use ylab::mcu;
 
 use ylab::ytfk::bsu as ybsu;
 use mcu::usart::{Config, Uart};
-use embassy_stm32::dma::NoDma;
+//use embassy_stm32::dma::NoDma;
 use mcu::{bind_interrupts, peripherals, usart};
 
 use mcu::mode::Async;
@@ -31,19 +29,19 @@ use embassy_embedded_hal::shared_bus::asynch::spi::SpiDevice;
 static SPI_BUS: StaticCell<Mutex<NoopRawMutex, Spi<Async>>> = StaticCell::new();
 
 bind_interrupts!(struct Irqs {
-        USART2 => usart::InterruptHandler<peripherals::USART2>;
-        USART3 => usart::InterruptHandler<peripherals::USART3>;
+        //USART2 => usart::InterruptHandler<peripherals::USART2>;
+        UART7 => usart::InterruptHandler<peripherals::UART7>;
     });
 
 #[embassy_executor::main]
 async fn main(spawner: yll::Spawner) {
-    defmt::info!("STM32F446ZE ADS1299 example init");
+    defmt::info!("STM32H743Zit ADS1299 example init");
 
     // init peripherals
     let p = embassy_stm32::init(Default::default());
     let mut config = Config::default();
     config.baudrate = 2_000_000;
-    let usart = Uart::new(p.USART3, p.PD9, p.PD8, Irqs, p.DMA1_CH3, p.DMA1_CH1, config).unwrap(); // <--- CH3 in conflict
+    let usart = Uart::new(p.UART7, p.PF6, p.PF7, Irqs, p.DMA1_CH0, p.DMA1_CH1, config).unwrap();
     match spawner.spawn(ybsu::task(usart)) {
         Ok(_) => {println!("USART OK")},
         Err(e)  => {println!("USART connection failed: {:?}", e)},

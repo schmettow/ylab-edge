@@ -4,16 +4,6 @@ use crate::SharedI2cDevice;
 use ylab_lib as yll;
 use yll::ysns::{moi, yxz_bmi160, yxz_lsm6, ads1115, yco2};
 
-/*#[embassy_executor::task]
-pub async fn lsm6_multi_task(i2c: SharedI2cDevice) {
-    ylab_lib::ysns::yxz_lsm6::inner_multi_task(i2c, 6, 101, 2, false, bsu::SINK.sender()).await;
-}
-
-#[embassy_executor::task]
-pub async fn lsm6_task(i2c: SharedI2cDevice) {
-    ylab_lib::ysns::yxz_lsm6::task(i2c, 101, 2, bsu::SINK.sender()).await;
-}*/
-
 #[embassy_executor::task]
 pub async fn moi_task(
     pin_0: ExtiInput<'static>,

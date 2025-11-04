@@ -5,8 +5,6 @@ pub mod adc {
     /// STM32
     pub use super::{mcu, Channel, Mutex, Ordering};
     pub use super::*;
-    use mcu::peripherals::{ADC1, PA0, PA1, PA4, PB0, PC0, PC1, PC2, PC3};
-    //use mcu::peripherals::{ADC3, PF3, PF4, PF5, PF6, PF7, PF8, PF9, PF10};
     use mcu::adc::{Adc, SampleTime};
     ///
     const N: usize = 8;
@@ -17,32 +15,33 @@ pub mod adc {
     pub static READY: AtomicBool = AtomicBool::new(false);
     pub static SAMPLE: AtomicBool = AtomicBool::new(true);
 
-    //type AdcPin: embedded_hal::adc::Channel<mcu::adc::Adc<'static>> + mcu::gpio::Pin;
-
-    /// Task for ADC controller 1 with eight pins
-    ///
+    //use mcu::adc::AnyAdcChannel;
+    use mcu::peripherals::{ADC1, PA0, PA1, PA2, PA3, PA4, PC0, PA7, PB1};
 
     #[embassy_executor::task]
     pub async fn adcbank_1(
-        // STM32
         mut adc: Adc<'static, ADC1>,
-        mut pins: ( Peri<'static,PA0>, Peri<'static,PA1>, Peri<'static,PA4>, Peri<'static,PB0>,
-                    Peri<'static,PC1>, Peri<'static,PC0>, Peri<'static,PC3>, Peri<'static,PC2>),
-        //
+        mut pins: ( Peri<'static,PA0>, Peri<'static,PA1>, Peri<'static,PA2>, Peri<'static,PA3>,Peri<'static,PA4>, Peri<'static,PC0>,Peri<'static,PA7>,Peri<'static,PB1>),
+        //mut pins: [AnyAdcChannel<_>; 8],
         hz: u64,
         sensory: u8,
     ) {
-        //println!("Starting ADC task");
-        //let state: Atomic<super::State> = Atomic::new(State::Offline);
+        println!("Starting ADC task");
         let mut ticker = Ticker::every(Duration::from_hz(hz));
         let mut _vrefint = adc.enable_vrefint();
 
         let mut sample: Sample;
-        adc.set_sample_time(SampleTime::CYCLES3);
+        //adc.set_sample_time(SampleTime::CYCLES3);
         adc.set_resolution(mcu::adc::Resolution::BITS12);
         //println!("ADC set");
         loop {
             if SAMPLE.load(ORD) {
+            	/*let reading =
+             		pins.iter().map(|p| adc.blocking_read(&mut p)).collect();*/
+
+           		/*for pin in pins {
+             		adc.blocking_read(&mut pin);
+             	}*/
                 let reading = [
                 	adc.blocking_read(&mut pins.0),
                     adc.blocking_read(&mut pins.1),
