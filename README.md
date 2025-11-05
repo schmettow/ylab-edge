@@ -17,7 +17,7 @@ All communication between tasks is transferred via thread-safe channels. This al
 + STM32 F446Zet
 + STM32 H743Zit
 
-# Supported compnents
+# Supported busses
 
 + 2 x I2C (shared bus)
 + 1 x SPI (shared bus)
