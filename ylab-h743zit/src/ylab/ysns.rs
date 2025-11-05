@@ -2,10 +2,10 @@ pub use super::ytfk::bsu as ybsu;
 pub use super::*;
 
 pub mod adc {
-    /// STM32
-    pub use super::{mcu, Channel, Mutex, Ordering};
     pub use super::*;
-    use mcu::adc::{Adc, SampleTime};
+    /// STM32
+    pub use super::{Channel, Mutex, Ordering, mcu};
+    use mcu::adc::Adc;
     ///
     const N: usize = 8;
     pub type Measure = u16;
@@ -16,12 +16,21 @@ pub mod adc {
     pub static SAMPLE: AtomicBool = AtomicBool::new(true);
 
     //use mcu::adc::AnyAdcChannel;
-    use mcu::peripherals::{ADC1, PA0, PA1, PA2, PA3, PA4, PC0, PA7, PB1};
+    use mcu::peripherals::{ADC1, PA0, PA1, PA2, PA3, PA4, PA7, PB1, PC0};
 
     #[embassy_executor::task]
     pub async fn adcbank_1(
         mut adc: Adc<'static, ADC1>,
-        mut pins: ( Peri<'static,PA0>, Peri<'static,PA1>, Peri<'static,PA2>, Peri<'static,PA3>,Peri<'static,PA4>, Peri<'static,PC0>,Peri<'static,PA7>,Peri<'static,PB1>),
+        mut pins: (
+            Peri<'static, PA0>,
+            Peri<'static, PA1>,
+            Peri<'static, PA2>,
+            Peri<'static, PA3>,
+            Peri<'static, PA4>,
+            Peri<'static, PC0>,
+            Peri<'static, PA7>,
+            Peri<'static, PB1>,
+        ),
         //mut pins: [AnyAdcChannel<_>; 8],
         hz: u64,
         sensory: u8,
@@ -36,14 +45,14 @@ pub mod adc {
         //println!("ADC set");
         loop {
             if SAMPLE.load(ORD) {
-            	/*let reading =
-             		pins.iter().map(|p| adc.blocking_read(&mut p)).collect();*/
+                /*let reading =
+                pins.iter().map(|p| adc.blocking_read(&mut p)).collect();*/
 
-           		/*for pin in pins {
-             		adc.blocking_read(&mut pin);
-             	}*/
+                /*for pin in pins {
+                    adc.blocking_read(&mut pin);
+                }*/
                 let reading = [
-                	adc.blocking_read(&mut pins.0),
+                    adc.blocking_read(&mut pins.0),
                     adc.blocking_read(&mut pins.1),
                     adc.blocking_read(&mut pins.2),
                     adc.blocking_read(&mut pins.3),

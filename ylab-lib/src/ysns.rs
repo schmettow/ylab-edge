@@ -1,9 +1,9 @@
 //pub use ylab_lib::{Duration, Instant, RawMutex, Signal, Timer};
 pub use super::*;
-pub use crate::ybus::{SharedI2cDevice, SharedDeviceMutex};
+pub use crate::ybus::{SharedDeviceMutex, SharedI2cDevice};
 use crate::ytfk::YtfSender;
-pub use defmt::println;
 pub use defmt::Format;
+pub use defmt::println;
 
 #[derive(Debug, Clone, Format)]
 pub enum YsenseErr {
@@ -23,13 +23,13 @@ pub enum YsenseErr {
 /// with a sensor struct T (e.g. Ads1299, Lsm6dsox)
 #[allow(dead_code)]
 pub struct Sensor<T, const N: usize, R>
-where R: core::fmt::Debug
+where
+    R: core::fmt::Debug,
 {
     sensor: T,
     sample_rate: R,
     pub id: u8,
 }
-
 
 pub mod yxz_tlv {
     use super::*;
@@ -45,11 +45,14 @@ pub mod yxz_tlv {
     pub type Reading = [Measure; N];
     pub type Sample = ydata::Sample<Measure, N>;
 
-
-    pub async fn inner_task<M, BUS>(i2c: SharedI2cDevice<'static, M, BUS>, hz: u64, sensory: u8, sink: YtfSender<'static>)
-    where
-    	M: SharedDeviceMutex,
-    	BUS: embedded_hal_async::i2c::I2c,
+    pub async fn inner_task<M, BUS>(
+        i2c: SharedI2cDevice<'static, M, BUS>,
+        hz: u64,
+        sensory: u8,
+        sink: YtfSender<'static>,
+    ) where
+        M: SharedDeviceMutex,
+        BUS: embedded_hal_async::i2c::I2c,
     {
         let address = 0x5E;
         let mut sensor = tlv::Tlv493d::new_async(i2c, address, tlv::Mode::Master)
@@ -75,8 +78,6 @@ pub mod yxz_tlv {
     }
 }
 
-
-
 pub mod yxz_bmi160 {
     use super::*;
     use bmi160::{AccelerometerPowerMode, Bmi160, GyroscopePowerMode, SensorSelector, SlaveAddr};
@@ -91,10 +92,14 @@ pub mod yxz_bmi160 {
     pub type Reading = [Measure; N];
     pub type Sample = ydata::Sample<Measure, N>;
 
-    pub async fn inner_task<M, BUS>(i2c: SharedI2cDevice<'static, M, BUS>, hz: u64, sensory: u8, sink: YtfSender<'static>)
-    where
-    	M: SharedDeviceMutex,
-    	BUS: embedded_hal_async::i2c::I2c,
+    pub async fn inner_task<M, BUS>(
+        i2c: SharedI2cDevice<'static, M, BUS>,
+        hz: u64,
+        sensory: u8,
+        sink: YtfSender<'static>,
+    ) where
+        M: SharedDeviceMutex,
+        BUS: embedded_hal_async::i2c::I2c,
     {
         let address = SlaveAddr::default();
         let mut sensor = Bmi160::new_with_i2c(i2c, address);
@@ -135,15 +140,12 @@ pub mod yxz_bmi160 {
             };
         }
     }
-
 }
-
-
 
 pub mod ads1115 {
     use super::*;
-    use ads1x1x::{channel, DataRate16Bit as DataRate};
     use ads1x1x::{Ads1x1x, TargetAddr};
+    use ads1x1x::{DataRate16Bit as DataRate, channel};
 
     // Data
 
@@ -155,10 +157,14 @@ pub mod ads1115 {
     pub static READY: AtomicBool = AtomicBool::new(false);
     pub static RECORD: AtomicBool = AtomicBool::new(true);
 
-    pub async fn inner_task<M, BUS>(i2c: SharedI2cDevice<'static, M, BUS>, hz: u64, sensory: u8, sink: YtfSender<'static>)
-    where
-    	M: SharedDeviceMutex,
-    	BUS: embedded_hal_async::i2c::I2c,
+    pub async fn inner_task<M, BUS>(
+        i2c: SharedI2cDevice<'static, M, BUS>,
+        hz: u64,
+        sensory: u8,
+        sink: YtfSender<'static>,
+    ) where
+        M: SharedDeviceMutex,
+        BUS: embedded_hal_async::i2c::I2c,
     {
         let address = TargetAddr::default();
         let mut ads = Ads1x1x::new_ads1115(i2c, address).await;
@@ -186,9 +192,6 @@ pub mod ads1115 {
     }
 }
 
-
-
-
 pub mod yco2 {
     use super::*;
     //use mcu::peripherals::I2C1 as ThisI2C;
@@ -208,19 +211,23 @@ pub mod yco2 {
 
     pub async fn task<M, B>(i2c: SharedI2cDevice<'_, M, B>, sensory: u8, sink: ytfk::YtfSender<'_>)
     where
-    	M: SharedDeviceMutex,
-     	B: embedded_hal_async::i2c::I2c,
+        M: SharedDeviceMutex,
+        B: embedded_hal_async::i2c::I2c,
     {
         let mut sensor = scd4x::Scd4xAsync::new(i2c, time::Delay); // <-- this makes it sybc or async
         sensor.wake_up().await; //<---- This fails
         match sensor.stop_periodic_measurement().await {
-            Ok(_) => {println!("Stopped periodic measurements")},
-            Err(_) => {println!("Stopping periodic measurements failed.")}
+            Ok(_) => {
+                println!("Stopped periodic measurements")
+            }
+            Err(_) => {
+                println!("Stopping periodic measurements failed.")
+            }
         }
 
         match sensor.reinit().await {
             Ok(_) => READY.store(true, ORD),
-            Err(_) => println!("SCD41 reinit failed.")
+            Err(_) => println!("SCD41 reinit failed."),
         }
 
         let serial = sensor.serial_number().await.unwrap();
@@ -238,13 +245,14 @@ pub mod yco2 {
                 match sensor.measurement().await {
                     Err(_) => println!("CO2: read failed."),
                     Ok(raw) => {
-                    	println!("CO2: read OK");
+                        println!("CO2: read OK");
                         let reading: Reading =
                             [raw.co2 as f32, raw.humidity as f32, raw.temperature as f32];
                         sample = Sample {
                             sensory: sensory,
                             time: Instant::now(),
-                            read: reading,};
+                            read: reading,
+                        };
                         sink.send(sample.into()).await;
                     }
                 };
@@ -252,8 +260,6 @@ pub mod yco2 {
         }
     }
 }
-
-
 
 pub mod sen_five {
     use super::*;
@@ -267,13 +273,13 @@ pub mod sen_five {
     pub static SAMPLE: AtomicBool = AtomicBool::new(true);
 
     //use embedded_hal::delay::DelayNs;
+    use async_sen5x as sen5x;
     use embedded_hal_async::i2c::I2c;
     use sen5x::Sen5x;
-    use async_sen5x as sen5x;
 
     pub struct Sensor<I>
     where
-        I: I2c
+        I: I2c,
     {
         sensor: Sen5x<I>,
         pub id: u8,
@@ -342,10 +348,14 @@ pub mod sen_five {
     //use mcu::peripherals::I2C1 as ThisI2C;
 
     //#[embassy_executor::task]
-    pub async fn task<M, B>(i2c: SharedI2cDevice<'_, M, B>, interval: Duration, sensory: u8, sink: ytfk::YtfSender<'_>)
-    where
-    	M: SharedDeviceMutex,
-     	B: embedded_hal_async::i2c::I2c,
+    pub async fn task<M, B>(
+        i2c: SharedI2cDevice<'_, M, B>,
+        interval: Duration,
+        sensory: u8,
+        sink: ytfk::YtfSender<'_>,
+    ) where
+        M: SharedDeviceMutex,
+        B: embedded_hal_async::i2c::I2c,
     {
         let mut sensor = Sensor::new(i2c, sensory, interval);
         match sensor.init().await {
@@ -374,15 +384,14 @@ pub mod sen_five {
     }
 }
 
-
-
-
 pub mod yds1299 {
     use super::*;
     // Sensor
-    use ads1299::descriptors::*;
-    pub use ads1299::descriptors::Command;
     use ads1299::Ads129x;
+    pub use ads1299::descriptors;
+    pub use ads1299::descriptors::Command;
+    use ads1299::descriptors::*;
+    //pub use ads1299::device_descriptor::Register;
     //use ads1299::AdsData;
     pub use ads1299::SensorVersion;
     // SPI Bus
@@ -461,8 +470,17 @@ pub mod yds1299 {
                 }
             };
 
+            let conf1 = Config1::default();
+            /*let conf1 = Config1::new(|r| {
+                r.data_rate()
+                    .write(DataRate::_8kSPS)
+                    .sampling()
+                    .write(Sampling::Continuous)
+            });*/
+            //conf1.data_rate().write(DataRate::_8kSPS);
+
             let config = ads1299::ConfigRegisters {
-                config1: Config1::default(),
+                config1: conf1,
                 config2: Config2::default(),
                 config3: Config3::default(),
                 config4: Config4::default(),
@@ -522,9 +540,6 @@ pub mod yds1299 {
         }
     }
 }
-
-
-
 
 pub mod yxz_lsm6 {
 
@@ -620,28 +635,32 @@ pub mod yxz_lsm6 {
         }
     }
 
-    pub async fn task<M, B>(i2c: SharedI2cDevice<'_, M, B>, hz: u64, sensory: u8, sink: ytfk::YtfSender<'_>)
-    where
-    	M: SharedDeviceMutex,
-     	B: AsyncI2c,
+    pub async fn task<M, B>(
+        i2c: SharedI2cDevice<'_, M, B>,
+        hz: u64,
+        sensory: u8,
+        sink: ytfk::YtfSender<'_>,
+    ) where
+        M: SharedDeviceMutex,
+        B: AsyncI2c,
     {
         let mut sensor = Sensor::new(i2c, sensory, hz);
         match sensor.init().await {
-        	Ok(_) => println!("Lsm6: init OK"),
-         	Err(e) => println!("Lsm6: read failed {:?}", e)
+            Ok(_) => println!("Lsm6: init OK"),
+            Err(e) => println!("Lsm6: read failed {:?}", e),
         }
         loop {
-	        let mut ticker = Ticker::every(Duration::from_hz(hz));
-	        sink.send(sensor.sample().await.unwrap().into()).await;
-	        ticker.next().await;
+            let mut ticker = Ticker::every(Duration::from_hz(hz));
+            sink.send(sensor.sample().await.unwrap().into()).await;
+            ticker.next().await;
         }
     }
 
     // MULTI Task
 
     use xca9548a::{SlaveAddr, Xca9548a};
-    pub async fn inner_multi_task<M,B>(
-        i2c: SharedI2cDevice<'_,M,B>,
+    pub async fn inner_multi_task<M, B>(
+        i2c: SharedI2cDevice<'_, M, B>,
         n: u8,
         hz: u64,
         sensory: u8,
@@ -670,28 +689,28 @@ pub mod yxz_lsm6 {
                 continue;
             }
             if let Ok(_) = sens.init().await {
-            	println!("Sensor {} active", s);
+                println!("Sensor {} active", s);
                 sensor_active[s] = true;
             };
         }
         loop {
-	        for (s, sensor) in sensors.as_mut().into_iter().enumerate() {
-	            if s >= n as usize {
-	                continue;
-	            }
-	            if let Ok(sam) = sensor.sample().await {
-	            	println!("Lsm6_{}: read OK", s);
-	                sink.send(sam.into()).await;
-	            }
-	        }
+            for (s, sensor) in sensors.as_mut().into_iter().enumerate() {
+                if s >= n as usize {
+                    continue;
+                }
+                if let Ok(sam) = sensor.sample().await {
+                    println!("Lsm6_{}: read OK", s);
+                    sink.send(sam.into()).await;
+                }
+            }
         }
     }
 }
 
 pub mod moi {
     use super::*;
-    use embedded_hal_async::digital::Wait;
     use embedded_hal::digital::InputPin;
+    use embedded_hal_async::digital::Wait;
     //use mcu::gpio::{Input, Pull};
     //use mcu::peripherals::{PIN_21, PIN_22};
 
@@ -703,7 +722,6 @@ pub mod moi {
     pub static READY: AtomicBool = AtomicBool::new(false);
     pub static RECORD: AtomicBool = AtomicBool::new(true);
 
-
     //#[embassy_executor::task]
     pub async fn inner_task<P: Wait>(
         mut moi_0: P,
@@ -714,7 +732,7 @@ pub mod moi {
         sink: ytfk::YtfSender<'_>,
     ) where
         P: Wait + InputPin,
-        {
+    {
         /*let mut moi_0 = Input::new(moi_0, Pull::Up);
         let mut moi_1 = Input::new(moi_1, Pull::Up);
         let mut moi_2 = Input::new(moi_2, Pull::Up);

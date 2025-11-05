@@ -1,11 +1,12 @@
 #![no_std]
 #![no_main]
 
+//use ylab::yllsns::yds1299::descriptors::*;
+use ylab::{Ticker, mcu};
 use ylab_lib as yll;
-use ylab::mcu;
 
-use ylab::ytfk::bsu as ybsu;
 use mcu::usart::{Config, Uart};
+use ylab::ytfk::bsu as ybsu;
 //use embassy_stm32::dma::NoDma;
 use mcu::{bind_interrupts, peripherals, usart};
 
@@ -14,46 +15,69 @@ use mcu::mode::Async;
 use mcu::spi::{Config as SpiConfig, Spi};
 
 //use ads129x::{Ads129x, ConfigRegisters, Error};
-use yll::ysns::yds1299 as yds;
 use yds::Command;
+use yll::ysns::yds1299 as yds;
 
 // Für Logging / Defmt
-use {defmt_rtt as _, panic_probe as _};
 use defmt::println;
+use {defmt_rtt as _, panic_probe as _};
 //use log::debug;
 
 use embassy_embedded_hal;
-use yll::{Mutex, NoopRawMutex, StaticCell};
 use embassy_embedded_hal::shared_bus::asynch::spi::SpiDevice;
+use yll::{Mutex, NoopRawMutex, StaticCell};
 
 static SPI_BUS: StaticCell<Mutex<NoopRawMutex, Spi<Async>>> = StaticCell::new();
 
 bind_interrupts!(struct Irqs {
-        //USART2 => usart::InterruptHandler<peripherals::USART2>;
-        UART7 => usart::InterruptHandler<peripherals::UART7>;
-    });
+    //USART2 => usart::InterruptHandler<peripherals::USART2>;
+    UART7 => usart::InterruptHandler<peripherals::UART7>;
+});
 
 #[embassy_executor::main]
 async fn main(spawner: yll::Spawner) {
-    defmt::info!("STM32H743Zit ADS1299 example init");
+    let mut config = mcu::Config::default();
+    {
+        use mcu::rcc::*;
+        // config.rcc.hsi = Some(HSIPrescaler::DIV1);
+        config.rcc.hsi = None; // Since we're using HSE
+        config.rcc.hse = Some(Hse {
+            freq: mcu::time::mhz(20),
+            mode: HseMode::Bypass,
+        });
+        config.rcc.csi = false;
+        config.rcc.pll1 = Some(Pll {
+            source: PllSource::HSE,
 
-    // init peripherals
-    let p = embassy_stm32::init(Default::default());
+            prediv: PllPreDiv::DIV2,
+
+            mul: PllMul::MUL32,
+            divp: Some(PllDiv::DIV2),
+            divq: Some(PllDiv::DIV8),
+            divr: Some(PllDiv::DIV2),
+        });
+        config.rcc.sys = Sysclk::PLL1_P; // 400 Mhz
+        config.rcc.ahb_pre = AHBPrescaler::DIV2; // 200 Mhz
+        config.rcc.apb1_pre = APBPrescaler::DIV2; // 100 Mhz
+        config.rcc.apb2_pre = APBPrescaler::DIV2; // 100 Mhz
+        config.rcc.apb3_pre = APBPrescaler::DIV2; // 100 Mhz
+        config.rcc.apb4_pre = APBPrescaler::DIV2; // 100 Mhz
+        config.rcc.voltage_scale = VoltageScale::Scale3;
+        //config.rcc.supply_config = SupplyConfig::DirectSMPS;
+    }
+    let p = embassy_stm32::init(config);
+    //let p = embassy_stm32::init(Default::default());
     let mut config = Config::default();
     config.baudrate = 2_000_000;
     let usart = Uart::new(p.UART7, p.PF6, p.PF7, Irqs, p.DMA1_CH0, p.DMA1_CH1, config).unwrap();
     match spawner.spawn(ybsu::task(usart)) {
-        Ok(_) => {println!("USART OK")},
-        Err(e)  => {println!("USART connection failed: {:?}", e)},
+        Ok(_) => {
+            println!("USART OK")
+        }
+        Err(e) => {
+            println!("USART connection failed: {:?}", e)
+        }
     }
-
-    // pins (be sure these match your wiring)
-    /*let sck = p.PB10;
-    let mosi = p.PC3;
-    let miso = p.PC2;
-    let cs_pin = p.PB9;
-    let tx_dma = p.DMA1_CH4; // <-- verify on your device
-    let rx_dma = p.DMA1_CH3; // <-- verify on your device*/
 
     // SPI config
     let spi_cfg = SpiConfig::default();
@@ -61,12 +85,10 @@ async fn main(spawner: yll::Spawner) {
     spi_cfg.phase = embassy_stm32::spi::Phase::CaptureOnFirstTransition;
     spi_cfg.polarity = embassy_stm32::spi::Polarity::IdleLow;*/
 
-    // --- IMPORTANT: pick DMA channels that are valid for SPI1 on F446ZE ---
-    // Example channels — VERIFY these against `p` for your specific chip!
-    // On many F4 parts SPI1 uses DMA2 streams/channels; check `embassy_stm32::peripherals`.
-
     // create the async Spi driver (this returns Spi<'d, Async>)
-    let spi = Spi::new(p.SPI2, p.PB10, p.PC3, p.PC2, p.DMA1_CH4, p.DMA1_CH3, spi_cfg);
+    let spi = Spi::new(
+        p.SPI2, p.PB10, p.PC3, p.PC2, p.DMA1_CH4, p.DMA1_CH3, spi_cfg,
+    );
 
     // wrap the spi into an embassy_sync::Mutex so it can be shared
     let spi_bus = yll::Mutex::new(spi);
@@ -76,7 +98,8 @@ async fn main(spawner: yll::Spawner) {
 
     // create a CS output pin (adjust constructor to your HAL's Output API)
     // embassy_stm32's Output::new signature may require OutputDrive; check your version.
-    let cs = embassy_stm32::gpio::Output::new(p.PB9, mcu::gpio::Level::High, mcu::gpio::Speed::High);
+    let cs =
+        embassy_stm32::gpio::Output::new(p.PB9, mcu::gpio::Level::High, mcu::gpio::Speed::High);
 
     // CORRECT: construct a SpiDevice on top of the shared bus (not Device::new(spi,...))
     let spi_dev = SpiDevice::new(spi_bus, cs);
@@ -101,6 +124,7 @@ async fn main(spawner: yll::Spawner) {
     if let Ok(_) = sensor.sensor.write_command_async(Command::WAKEUP).await {
         println!("Sensor wakeup OK");
     }
+
     if let Ok(_) = sensor.sensor.write_command_async(Command::RDATAC).await {
         println!("Sensor continuous sampling OK");
     }
@@ -114,11 +138,12 @@ async fn main(spawner: yll::Spawner) {
         println!("Sensor ID OK");
     }
 
+    let mut ticker = Ticker::every(ylab::Duration::from_millis(4));
     let mut count = 0;
     loop {
         if let Ok(s) = sensor.sample().await {
             count += 1;
-            if count % 1000 == 0 {
+            if count % 10 == 0 {
                 let y: yll::ydata::Ytf = s.clone().into();
                 println!("{}: {:?}", count, y.read);
             };
@@ -126,5 +151,6 @@ async fn main(spawner: yll::Spawner) {
         } else {
             println!("Reading failed")
         }
+        ticker.next().await;
     }
 }
