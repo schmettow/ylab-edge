@@ -65,8 +65,8 @@ async fn main(spawner: Spawner) {
     // USB
     use esp_hal::uart::{Config, Uart};
     let uart = Uart::new(p.UART0, Config::default()).unwrap()
-    	.with_rx(p.GPIO1)
-    	.with_tx(p.GPIO2)
+    	.with_rx(p.GPIO4)
+    	.with_tx(p.GPIO5)
      	.into_async();
     spawner.spawn(ylab::ytfk::bsu::task(uart)).unwrap();
 
@@ -81,11 +81,14 @@ async fn main(spawner: Spawner) {
     let i2c = mcu::i2c::master::I2c::new(
     	p.I2C0,
      	mcu::i2c::master::Config::default()).unwrap()
-        	.with_sda(p.GPIO21)
-         	.with_scl(p.GPIO22)
+        	.with_sda(p.GPIO6)
+         	.with_scl(p.GPIO7)
         		.into_async();
     static I2C_BUS: ylab::StaticCell<ylab::SharedI2cBus> = ylab::StaticCell::new();
     let i2c_bus = I2C_BUS.init(ylab::Mutex::new(i2c));
     let i2c1 = ylab::SharedI2cDevice::new(i2c_bus);
     spawner.spawn(ylab::task::lsm6_task(i2c1, 101, 2)).unwrap();
+
+    // ADC
+    let adc = p.ADC1;
 }

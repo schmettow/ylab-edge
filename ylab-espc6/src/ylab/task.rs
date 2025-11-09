@@ -1,9 +1,9 @@
 use super::*;
 use ylab_lib as yll;
-use yll::ysns::{moi, yxz_bmi160, yxz_lsm6, ads1115, yco2};
-use yll::yuii::btn;
-use yll::yuio::led;
-use mcu::gpio::{Input, Pull, Output};
+use yll::ysns::{moi, yxz_lsm6, }; //yxz_bmi160,ads1115, yco2};
+//use yll::yuii::btn;
+//use yll::yuio::led;
+use mcu::gpio::Input; //, Pull, Output};
 use crate::ytfk::bsu::SINK;
 
 /*#[embassy_executor::task]

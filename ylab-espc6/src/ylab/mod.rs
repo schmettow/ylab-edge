@@ -11,7 +11,7 @@ pub use yll::yuio;
 pub use yll::*;
 pub use yll::ybus::*;
 
-//pub mod ysns; // Ylab sensors
+pub mod ysns; // Ylab sensors
 pub mod ytfk;
 //pub mod yuii; // YLab UI Input
 //pub mod yuio; // YLab UI Output // YLab transfer formats & kodices
