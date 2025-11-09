@@ -5,7 +5,7 @@ pub mod bsu {
 
     // Channel
     pub static SINK: Channel<RawMutex, Ytf, 8> = Channel::new();
-    
+
     // USB
     use mcu::usart::Uart;
     #[embassy_executor::task]
@@ -14,12 +14,10 @@ pub mod bsu {
             let sample: Ytf = SINK.receive().await;
             let mut msg: Vec<u8, 256> = Vec::new();
             match core::write!(&mut msg, "{}", sample) {
-                Ok(_) => usart.write(&msg).await.unwrap(),
+                Ok(_) => {usart.write(&msg).await.unwrap()},
                 Err(_) => {},
             }
-            usart.write(&msg).await.unwrap()
+            //usart.write(&msg).await.unwrap()
         }
     }
 }
-
- 
