@@ -12,11 +12,28 @@ pub enum YsenseErr {
     Task,
 }
 
-/*pub trait Ysense<const N: usize> {
-    type Measure;
+/*pub trait Ysense {
+    const id: usize;
+	type Rate; // enum from driver crate rate
+	type Measure; // Sensor output type
+	type Error; // enum from driver crate
+    const N: usize; // number of sensors
+    type Sample = ydata::Sample<Measure, N>;
     async fn init(&mut self) -> Result<(), YsenseErr>;
+    //async fn set_rate(&mut self, rate: Rate) -> Result<(), YsenseErr>;
     async fn read(&self) -> Result<[Measure; N], YsenseErr>;
+    async fn sample(&self) -> Result<Sample, YsenseErr> {
+    	let read = self.read().await?;
+     	let time = Instant::now();
+      	Sample {
+       		sensory: id,
+         	time: time,
+          	read: read,
+       }
+    };
 }*/
+
+
 
 /// Generic sensor structure
 ///
@@ -30,6 +47,53 @@ where
     sample_rate: R,
     pub id: u8,
 }
+
+pub mod yirt_max {
+    use super::*;
+    use max3010x::*;
+
+    /* control channels */
+    pub static READY: AtomicBool = AtomicBool::new(false);
+    pub static RECORD: AtomicBool = AtomicBool::new(true);
+
+    const N: usize = 8;
+    pub type Measure = u32;
+    pub type Sample = ydata::Sample<Measure, N>;
+    pub type Error<BUS> = max3010x::Error<ybus::SharedI2cErr<BUS>>;
+
+    pub async fn task<M, BUS>(
+        i2c: SharedI2cDevice<'static, M, BUS>,
+        hz: u64,
+        sensory: u8,
+        sink: YtfSender<'static>,
+    	) -> Result<(), Error<BUS>>
+     where
+        M: SharedDeviceMutex,
+        BUS: embedded_hal_async::i2c::I2c,
+    {
+    	let mut sensor = Max3010x::new_max30102(i2c);
+        sensor.wake_up().await?;
+        let mut sensor = sensor.into_multi_led().await?;
+        sensor.set_pulse_amplitude(Led::All, 255).await?;
+        sensor.set_led_time_slots([
+            TimeSlot::Led1,
+            TimeSlot::Led2,
+            TimeSlot::Led2,
+            TimeSlot::Led1
+        ]).await?;
+        sensor.enable_fifo_rollover().await?;
+        let mut read_buf = [0 as Measure; N];
+        let mut ticker = Ticker::every(Duration::from_hz(hz));
+        loop {
+            let _ = sensor.read_fifo(&mut read_buf).await?;
+            sink.send(Sample{sensory: sensory,
+            				 time: Instant::now(),
+                 			 read: read_buf,}.into()).await;
+            ticker.next().await
+	    }
+    }
+}
+
 
 pub mod yxz_tlv {
     use super::*;

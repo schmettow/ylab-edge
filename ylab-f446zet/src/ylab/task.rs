@@ -2,7 +2,7 @@ use crate::ytfk::bsu::SINK;
 use crate::mcu::exti::ExtiInput;
 use crate::SharedI2cDevice;
 use ylab_lib as yll;
-use yll::ysns::{moi, yxz_bmi160, yxz_lsm6, ads1115, yco2};
+use yll::ysns::{moi, yxz_bmi160, yxz_lsm6, ads1115, yco2, yirt_max};
 
 /*#[embassy_executor::task]
 pub async fn lsm6_multi_task(i2c: SharedI2cDevice) {
@@ -32,6 +32,11 @@ pub async fn lsm6_multi_task(i2c: SharedI2cDevice, hz: u64, id: u8, n: u8) {
 #[embassy_executor::task]
 pub async fn lsm6_task(i2c: SharedI2cDevice, hz: u64, id: u8) {
 	yxz_lsm6::task(i2c, hz, id, SINK.sender()).await;
+}
+
+#[embassy_executor::task]
+pub async fn max3010x_task(i2c: SharedI2cDevice, hz: u64, id: u8) {
+	yirt_max::task(i2c, hz, id, SINK.sender()).await.unwrap();
 }
 
 #[embassy_executor::task]
