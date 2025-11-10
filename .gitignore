@@ -1,4 +1,5 @@
 /target/
+/ylab-lib/target/*
 **/*.rs.bk
 Cargo.lock
 .~lock.Checklist.ods#
