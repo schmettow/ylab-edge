@@ -53,13 +53,13 @@ async fn main(spawner: Spawner) {
         = ExtiInput::new(p.PD0,  p.EXTI0, ylab::Pull::Down,);
     let moi_4
         = ExtiInput::new(p.PD1, p.EXTI1, ylab::Pull::Down);
-    spawner.spawn(moi_task(moi_0, moi_1, moi_3, moi_4)).unwrap();
+    spawner.spawn(task::moi(moi_0, moi_1, moi_3, moi_4)).unwrap();
 
     //ADC
     let adc1 = adc::Adc::new(p.ADC1);
     spawner.spawn(yadc::adcbank_1(adc1,
                                 (p.PA0, p.PA1, p.PA4, p.PB0, p.PC1, p.PC0, p.PC3, p.PC2),
-                                197, 1)).unwrap();
+                                2, 1)).unwrap();
 
     // I2C bus
     let i2c1 = I2c::new(p.I2C1, p.PB8, p.PB9, Irqs, p.DMA1_CH7, p.DMA1_CH0, Default::default());

@@ -12,17 +12,20 @@ pub enum YsenseErr {
     Task,
 }
 
-/*pub trait Ysense {
+/*pub trait Ysense<M, BUS>
+where 	M: SharedDeviceMutex,
+		BUS: embedded_hal_async::i2c::I2c,
+	{
     const id: usize;
 	type Rate; // enum from driver crate rate
 	type Measure; // Sensor output type
 	type Error; // enum from driver crate
     const N: usize; // number of sensors
     type Sample = ydata::Sample<Measure, N>;
-    async fn init(&mut self) -> Result<(), YsenseErr>;
-    //async fn set_rate(&mut self, rate: Rate) -> Result<(), YsenseErr>;
-    async fn read(&self) -> Result<[Measure; N], YsenseErr>;
-    async fn sample(&self) -> Result<Sample, YsenseErr> {
+    async fn init(&mut self, SharedI2cDeviceS) -> Result<(), YsenseErr>;
+    async fn set_rate(&mut self, rate: Rate) -> Result<(), Error>;
+    async fn read(&self) -> Result<[Measure; N], Error>;
+    async fn sample(&self) -> Result<Sample, Error> {
     	let read = self.read().await?;
      	let time = Instant::now();
       	Sample {
@@ -31,26 +34,31 @@ pub enum YsenseErr {
           	read: read,
        }
     };
-}*/
-
-
-
-/// Generic sensor structure
-///
-/// with a sensor struct T (e.g. Ads1299, Lsm6dsox)
-#[allow(dead_code)]
-pub struct Sensor<T, const N: usize, R>
-where
-    R: core::fmt::Debug,
-{
-    sensor: T,
-    sample_rate: R,
-    pub id: u8,
 }
+
+pub mod max3 {
+	use super::*;
+    use max3010x as max3;
+
+    impl Ysense for max3::Max3010x {
+    	type Rate = max3::SamplingRate;
+     	type Measure = u16;
+      	type Error = max3::Error;
+       	const N: usize = 4;
+        async fn init(&mut self, SharedI2cDevice) {
+        	Ok(())
+        };
+        async fn set_rate(rate: Rate) {
+        	OK(())
+        }
+        async fn read(&self)
+    }
+}*/
 
 pub mod yirt_max {
     use super::*;
     use max3010x::*;
+    pub use max3010x::SamplingRate;
 
     /* control channels */
     pub static READY: AtomicBool = AtomicBool::new(false);
@@ -63,7 +71,7 @@ pub mod yirt_max {
 
     pub async fn task<M, BUS>(
         i2c: SharedI2cDevice<'static, M, BUS>,
-        hz: u64,
+        rate: SamplingRate,
         sensory: u8,
         sink: YtfSender<'static>,
     	) -> Result<(), Error<BUS>>
@@ -72,9 +80,15 @@ pub mod yirt_max {
         BUS: embedded_hal_async::i2c::I2c,
     {
     	let mut sensor = Max3010x::new_max30102(i2c);
+     	println!("Max3 wake!");
         sensor.wake_up().await?;
+        println!("Max3 awake");
+        //let mut sensor = sensor.into_oximeter().await?;
         let mut sensor = sensor.into_multi_led().await?;
-        sensor.set_pulse_amplitude(Led::All, 255).await?;
+        println!("Max3010x in MultiLed mode");
+        sensor.set_pulse_amplitude(Led::All, 15).await?;
+        sensor.set_sampling_rate(rate).await?;
+        sensor.set_sample_averaging(SampleAveraging::Sa4).await?;
         sensor.set_led_time_slots([
             TimeSlot::Led1,
             TimeSlot::Led2,
@@ -82,18 +96,21 @@ pub mod yirt_max {
             TimeSlot::Led1
         ]).await?;
         sensor.enable_fifo_rollover().await?;
+        println!("Max3010x all set");
         let mut read_buf = [0 as Measure; N];
-        let mut ticker = Ticker::every(Duration::from_hz(hz));
+        //let mut ticker = Ticker::every(Duration::from_hz(hz));
         loop {
-            let _ = sensor.read_fifo(&mut read_buf).await?;
-            sink.send(Sample{sensory: sensory,
-            				 time: Instant::now(),
-                 			 read: read_buf,}.into()).await;
-            ticker.next().await
-	    }
-    }
+            match sensor.read_fifo(&mut read_buf).await {
+	            Ok(i) => if i > 0 {	sink.send(Sample{sensory: sensory,
+         				 				time: Instant::now(),
+              			 				read: read_buf,}.into()).await;
+										println!("Max3: {:?}", read_buf)}
+						else {println!("Max3´: empty fifo")},
+				Err(_) => println!("Max3 read failed")
+            }
+    	}
+	}
 }
-
 
 pub mod yxz_tlv {
     use super::*;
@@ -271,41 +288,32 @@ pub mod yco2 {
     pub type Reading = [Measure; N];
     pub type Sample = ydata::Sample<Measure, N>;
 
+    pub type Error<BUS> = scd4x::Error<ybus::SharedI2cErr<BUS>>;
+
     //#[embassy_executor::task]
 
     pub async fn task<M, B>(i2c: SharedI2cDevice<'_, M, B>, sensory: u8, sink: ytfk::YtfSender<'_>)
+    -> Result<(), Error<B>>
     where
         M: SharedDeviceMutex,
         B: embedded_hal_async::i2c::I2c,
     {
         let mut sensor = scd4x::Scd4xAsync::new(i2c, time::Delay); // <-- this makes it sybc or async
-        sensor.wake_up().await; //<---- This fails
-        match sensor.stop_periodic_measurement().await {
-            Ok(_) => {
-                println!("Stopped periodic measurements")
-            }
-            Err(_) => {
-                println!("Stopping periodic measurements failed.")
-            }
-        }
-
-        match sensor.reinit().await {
-            Ok(_) => READY.store(true, ORD),
-            Err(_) => println!("SCD41 reinit failed."),
-        }
-
-        let serial = sensor.serial_number().await.unwrap();
-        println!("CO2: serial {:?}", serial);
-        sensor.start_periodic_measurement().await.unwrap();
+        sensor.wake_up().await;
+        println!("CO2: Wake up signal sent");
+        //sensor.stop_periodic_measurement().await?;
+        //let serial = sensor.serial_number().await;
+        //println!("CO2: serial {:?}", serial);
+        sensor.start_periodic_measurement().await?;
         println!("CO2: Started periodic measurement");
 
-        let mut ticker = Ticker::every(Duration::from_secs(5));
+        //let mut ticker = Ticker::every(Duration::from_secs(5));
         let mut sample: Sample;
         println!("SCD41 all set");
 
         loop {
             if SAMPLE.load(ORD) {
-                ticker.next().await;
+                //ticker.next().await;
                 match sensor.measurement().await {
                     Err(_) => println!("CO2: read failed."),
                     Ok(raw) => {
