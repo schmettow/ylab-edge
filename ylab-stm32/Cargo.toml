@@ -1,0 +1,38 @@
+[package]
+edition = "2024"
+name = "ylab-stm32"
+version = "0.2.0"
+license = "MIT OR Apache-2.0"
+#resolver = "2"
+
+[lib]
+name = "ylab"
+path = "src/mod.rs"
+
+[dependencies]
+ylab-lib = { path = "../ylab-lib" }
+cortex-m = { version = "0.7.7", features = [
+    "inline-asm",
+    "critical-section-single-core",
+] }
+cortex-m-rt = "0.7.5"
+
+defmt = "1.0.1"
+defmt-rtt = "1.1.0"
+panic-probe = { version = "1.0.0", features = ["print-defmt"] }
+
+embassy-stm32 = { version = "0.4.0", features = [
+    "defmt",
+    #"stm32f446ze",
+    "memory-x",
+    "time-driver-any",
+    "exti",
+] }
+embassy-executor = { version = "0.9.1", features = [
+    "arch-cortex-m",
+    "executor-thread",
+    "executor-interrupt",
+    "defmt",
+] }
+embassy-sync = { version = "0.7.2", features = ["defmt"] }
+embassy-embedded-hal = { version = "0.5.0", features = ["defmt"] }
