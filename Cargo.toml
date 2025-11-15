@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["ylab-lib", "ylab-rp2040", "ylab-f446zet", "ylab-h743zit", "ylab-espc6"]
+members = ["ylab-lib", "ylab-rp2040", "ylab-stm32","ylab-f446zet", "ylab-h743zit", "ylab-espc6"]
 
 [patch.crates-io]
 

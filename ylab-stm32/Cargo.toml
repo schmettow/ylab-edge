@@ -9,6 +9,24 @@ license = "MIT OR Apache-2.0"
 name = "ylab"
 path = "src/mod.rs"
 
+[features]
+f446ze = [  "embassy-stm32/defmt",
+            "embassy-stm32/stm32f446ze",
+            "embassy-stm32/memory-x",
+            "embassy-stm32/time-driver-any",
+            "embassy-stm32/exti",]
+f446re = [  "embassy-stm32/defmt",
+            "embassy-stm32/stm32f446re",
+            "embassy-stm32/memory-x",
+            "embassy-stm32/time-driver-any",
+            "embassy-stm32/exti",]
+h742zi = [  "embassy-stm32/defmt",
+            "embassy-stm32/stm32h742zi",
+            "embassy-stm32/memory-x",
+            "embassy-stm32/time-driver-any",
+            "embassy-stm32/exti",]
+default = []
+
 [dependencies]
 ylab-lib = { path = "../ylab-lib" }
 cortex-m = { version = "0.7.7", features = [
@@ -21,18 +39,13 @@ defmt = "1.0.1"
 defmt-rtt = "1.1.0"
 panic-probe = { version = "1.0.0", features = ["print-defmt"] }
 
-embassy-stm32 = { version = "0.4.0", features = [
-    "defmt",
-    #"stm32f446ze",
-    "memory-x",
-    "time-driver-any",
-    "exti",
-] }
+embassy-stm32 = "0.4.0" #{ version = "0.4.0", features = []}
 embassy-executor = { version = "0.9.1", features = [
     "arch-cortex-m",
     "executor-thread",
     "executor-interrupt",
     "defmt",
 ] }
+
 embassy-sync = { version = "0.7.2", features = ["defmt"] }
 embassy-embedded-hal = { version = "0.5.0", features = ["defmt"] }
