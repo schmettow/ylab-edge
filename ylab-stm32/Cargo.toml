@@ -6,7 +6,7 @@ license = "MIT OR Apache-2.0"
 #resolver = "2"
 
 [lib]
-name = "ylab"
+name = "ylab_stm32"
 path = "src/mod.rs"
 
 [features]

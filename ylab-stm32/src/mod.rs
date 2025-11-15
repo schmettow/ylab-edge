@@ -35,7 +35,7 @@ pub type MasterAsyncI2c = mcu::i2c::I2c<'static, mcu::mode::Async, mcu::i2c::Mas
 //pub type I2c1 = I2cDevice<'static, SharedBusMutexType, I2c<'static, I2C1, Async>>;
 pub type SharedI2cDevice = I2cDevice<'static, SharedBusMutexType, I2c<'static, Async, mcu::i2c::Master>>;
 
-//pub mod ysns; // Ylab sensors
+//pub mod ysns; // analog sensors
 pub mod ytfk;
 pub mod task;
 //pub mod yuii; // YLab UI Input
