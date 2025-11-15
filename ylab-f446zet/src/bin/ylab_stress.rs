@@ -1,13 +1,11 @@
 #![no_std]
 #![no_main]
 
-
+use task;
 use ylab::*;
 use ylab::mcu;
 use ylab::ysns::adc as yadc;
 use ylab::ytfk::bsu as ybsu;
-use task::{sen5_task, co2_task, moi_task};
-
 
 
 #[derive(Debug,  // used as fmt
@@ -53,8 +51,8 @@ async fn main(spawner: Spawner) {
         = ExtiInput::new(p.PD0,  p.EXTI0, ylab::Pull::Down,);
     let moi_4
         = ExtiInput::new(p.PD1, p.EXTI1, ylab::Pull::Down);
-    //spawner.spawn(ysns::moi::task(moi_0, moi_1, 0)).unwrap();
-    spawner.spawn(moi_task(moi_0, moi_1, moi_3, moi_4)).unwrap();
+
+    spawner.spawn(task::moi_task(moi_0, moi_1, moi_3, moi_4)).unwrap();
 
     //ADC
     //let mut delay = Delay;
@@ -63,20 +61,17 @@ async fn main(spawner: Spawner) {
                                 (p.PA0, p.PA1, p.PA4, p.PB0, p.PC1, p.PC0, p.PC3, p.PC2),
                                 197, 1)).unwrap();
 
-    // I2C 1
+
     let i2c1 = I2c::new(p.I2C1, p.PB8, p.PB9, Irqs, p.DMA1_CH7, p.DMA1_CH0, Default::default());
     static I2C_BUS_1: StaticCell<SharedI2cBus> = StaticCell::new();
     let i2c_bus_1 = I2C_BUS_1.init(Mutex::new(i2c1));
-    // I2C 3
-    let i2c3 = I2c::new(p.I2C3, p.PA8, p.PC9, Irqs, p.DMA1_CH4, p.DMA1_CH2, Default::default());
-    static I2C_BUS_3: StaticCell<SharedI2cBus> = StaticCell::new();
-    let i2c_bus_3 = I2C_BUS_3.init(Mutex::new(i2c3));
-    // Sen5
+
+
     let i2c11 = SharedI2cDevice::new(i2c_bus_1);
-    spawner.spawn(sen5_task(i2c11, 2)).unwrap();
-    // CO2
-    let i2c31 = SharedI2cDevice::new(i2c_bus_3);
-    spawner.spawn(co2_task(i2c31, 3)).unwrap();
+    spawner.spawn(task::yirt_task(i2c11, ylab_lib::ysns::yirt_max::SamplingRate::Sps50, 2)).unwrap();
+    let i2c12 = SharedI2cDevice::new(i2c_bus_1);
+    spawner.spawn(task::co2_task(i2c12, 2)).unwrap();
+
 
 
 }

@@ -2,8 +2,8 @@ use crate::ytfk::bsu::SINK;
 use crate::mcu::exti::ExtiInput;
 use crate::SharedI2cDevice;
 use ylab_lib as yll;
-use yll::ysns::{moi, yxz_bmi160, yxz_lsm6, ads1115, yco2};
-
+use yll::ysns::*;
+use crate::println;
 /*#[embassy_executor::task]
 pub async fn lsm6_multi_task(i2c: SharedI2cDevice) {
     ylab_lib::ysns::yxz_lsm6::inner_multi_task(i2c, 6, 101, 2, false, bsu::SINK.sender()).await;
@@ -22,6 +22,21 @@ pub async fn moi_task(
     pin_3: ExtiInput<'static>)
     {
 	moi::inner_task(pin_0, pin_1, pin_2, pin_3, 0, SINK.sender()).await;
+}
+
+
+#[embassy_executor::task]
+pub async fn sen5_task(i2c: SharedI2cDevice, id: u8) {
+	ylab_lib::ysns::sen_five::task(i2c,  Duration::from_secs(5), id, SINK.sender()).await;
+}
+
+
+#[embassy_executor::task]
+pub async fn yirt_task(i2c: SharedI2cDevice, rate: yirt_max::SamplingRate, id: u8) {
+	match yirt_max::task(i2c,  rate, id, SINK.sender()).await {
+		Ok(_) => println!("Max3 task ended okay."),
+		Err(_) => println!("Max3 task failed")
+	};
 }
 
 #[embassy_executor::task]
@@ -46,7 +61,10 @@ pub async fn bmi160_task(i2c: SharedI2cDevice, hz: u64, id: u8) {
 
 #[embassy_executor::task]
 pub async fn co2_task(i2c: SharedI2cDevice, id: u8) {
-	yco2::task(i2c, id, SINK.sender()).await;
+	match yco2::task(i2c, id, SINK.sender()).await {
+		Ok(_) => println!("Co2 task ended okay."),
+		Err(_) => println!("Co2 task failed")
+	}
 }
 
 #[embassy_executor::task]
