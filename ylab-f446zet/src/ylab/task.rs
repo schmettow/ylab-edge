@@ -26,6 +26,12 @@ pub async fn moi_task(
 
 
 #[embassy_executor::task]
+pub async fn sen5_task(i2c: SharedI2cDevice, id: u8) {
+	ylab_lib::ysns::sen_five::task(i2c,  Duration::from_secs(5), id, SINK.sender()).await;
+}
+
+
+#[embassy_executor::task]
 pub async fn yirt_task(i2c: SharedI2cDevice, rate: yirt_max::SamplingRate, id: u8) {
 	match yirt_max::task(i2c,  rate, id, SINK.sender()).await {
 		Ok(_) => println!("Max3 task ended okay."),

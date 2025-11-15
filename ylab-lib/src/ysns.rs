@@ -6,41 +6,46 @@ pub use defmt::Format;
 pub use defmt::println;
 
 #[derive(Debug, Clone, Format)]
-pub enum YsenseErr {
+pub enum YsenseErr<> {
     Init,
     Read,
     Task,
 }
 
-/*pub trait Ysense<M, BUS>
+/*pub trait Ysense<M, BUS, const N: usize>
 where 	M: SharedDeviceMutex,
 		BUS: embedded_hal_async::i2c::I2c,
 	{
     const id: usize;
+    const label: &str;
 	type Rate; // enum from driver crate rate
 	type Measure; // Sensor output type
 	type Error; // enum from driver crate
-    const N: usize; // number of sensors
-    type Sample = ydata::Sample<Measure, N>;
-    async fn init(&mut self, SharedI2cDeviceS) -> Result<(), YsenseErr>;
-    async fn set_rate(&mut self, rate: Rate) -> Result<(), Error>;
-    async fn read(&self) -> Result<[Measure; N], Error>;
-    async fn sample(&self) -> Result<Sample, Error> {
-    	let read = self.read().await?;
-     	let time = Instant::now();
-      	Sample {
-       		sensory: id,
-         	time: time,
-          	read: read,
-       }
-    };
-}
+    type Reading = [Self::Measure; N];
+    type Sample = ydata::Sample<Self::Measure, N>;
+    async fn init(&mut self, i2c: SharedI2cDevice) -> Result<(), YsenseErr>;
+    async fn set_rate(&mut self, rate: Self::Rate) -> Result<(), Self::Error>;
+    async fn read(&self) -> Result<Self::Reading, Self::Error>;
+    async fn sample(&self) -> Result<Self::Sample, Self::Error> {
+    	match self.read().await {
+     		Ok(r) => {	let time = Instant::now();
+	      				Ok(Self::Sample {
+				       		sensory: Self::id,
+				         	time: time,
+				          	read: r,})
+       					},
+            Err(e) => println!("{}: Read failed {:?} ", Self::label.into(), e),
+     	}
+    }
+}*/
 
-pub mod max3 {
+/*pub mod max3 {
 	use super::*;
     use max3010x as max3;
 
     impl Ysense for max3::Max3010x {
+    	const id: usize = 11;
+     	const label: &str = "";
     	type Rate = max3::SamplingRate;
      	type Measure = u16;
       	type Error = max3::Error;
