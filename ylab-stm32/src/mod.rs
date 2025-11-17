@@ -17,10 +17,10 @@ pub use data::Ytf;
 pub use yll::ybus::*;
 pub use yll::yuii;
 pub use yll::yuio;
-pub use yll::ysns as yllsns;
+//pub use yll::ysns as yllsns;
 
-pub use mcu::peripherals::I2C1;
-pub use mcu::peripherals::I2C2;
+/*pub use mcu::peripherals::I2C1;
+pub use mcu::peripherals::I2C2;*/
 pub use mcu::i2c::I2c;
 use mcu::mode::Async;
 //use embassy_embedded_hal as ehal;
@@ -38,5 +38,6 @@ pub type SharedI2cDevice = I2cDevice<'static, SharedBusMutexType, I2c<'static, A
 //pub mod ysns; // analog sensors
 pub mod ytfk;
 pub mod task;
+pub mod ysns;
 //pub mod yuii; // YLab UI Input
 //pub mod yuio; // YLab UI Output // YLab transfer formats & kodices
