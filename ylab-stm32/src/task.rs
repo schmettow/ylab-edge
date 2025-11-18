@@ -19,16 +19,16 @@ pub async fn moi_task(
 	ysns::moi::inner_task(pin_0, pin_1, pin_2, pin_3, 0, SINK.sender()).await;
 }
 
-use cortex_m::singleton;
+/*use cortex_m::singleton;
 use mcu::Peripherals;
 use mcu::adc::{Adc, AdcChannel, RingBufferedAdc, SampleTime};
 #[embassy_executor::task]
 pub async fn adc_task ( p:Peripherals,
                         id: u8,
-                        hz: u64) 
+                        hz: u64)
     {
-    
-}
+
+}*/
 
 #[embassy_executor::task]
 pub async fn sen5_task(i2c: SharedI2cDevice, id: u8) {

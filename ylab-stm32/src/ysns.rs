@@ -7,7 +7,7 @@ pub use yll::ysns::*;
 pub use crate::println;
 
 pub mod adc {
-    use super::{yll, mcu, AtomicBool, Ticker, Duration, Instant, ORD, println};
+    /*use super::{yll, mcu, AtomicBool, Ticker, Duration, Instant, ORD, println};
     use embassy_sync::channel;
     use mcu::adc;
     pub use adc::AnyAdcChannel;
@@ -16,7 +16,7 @@ pub mod adc {
 
     /// STM32
     //pub use super::{mcu, Channel, Mutex, Ordering};
-    
+
     //use mcu::{Peri, peripherals::{ADC1, PA0, PA1, PA4, PB0, PC0, PC1, PC2, PC3}};
      //use mcu::peripherals::{ADC3, PF3, PF4, PF5, PF6, PF7, PF8, PF9, PF10};
     use mcu::adc::{Adc, SampleTime};
@@ -25,27 +25,27 @@ pub mod adc {
     pub type Measure = u16;
     pub type Reading = [Measure; N];
     pub type Sample = yll::ydata::Sample<Measure, N>;
-    
+
 
     pub static READY: AtomicBool = AtomicBool::new(false);
     pub static SAMPLE: AtomicBool = AtomicBool::new(true);
 
     //type AdcPin: embedded_hal::adc::Channel<mcu::adc::Adc<'static>> + mcu::gpio::Pin;
-    const DMA_BUF_LEN: usize = 120;
-    
-    
+    const DMA_BUF_LEN: usize = 120;*/
+
+
     /*pub async fn ring_task<I>(
         adc: Adc<'static, I>,
         pins: [Peri<'static, AnyAdcChannel<I>>; N],
         dma: Peri<'static, impl adc::RxDma<I>>,
         //dma_buf: &'static mut [u16],
         sensory: u8,)
-    where 
+    where
         I: adc::Instance + 'static,
-    {   
-        let mut dma_buf = [0u16; DMA_BUF_LEN]; 
+    {
+        let mut dma_buf = [0u16; DMA_BUF_LEN];
         let mut adc = adc.into_ring_buffered(
-            dma, 
+            dma,
             &mut dma_buf,
             /*[
                 (&mut *pins[0], adc::SampleTime::CYCLES15),
@@ -73,7 +73,7 @@ pub mod adc {
                 crate::ysns::SINK.send(sample.into()).await;
                 ticker.next().await;*/
         }*/
-    
+
 
 
 
@@ -110,15 +110,15 @@ pub mod adc {
         }
 
     }*/
-    
-    
+
+
     /*#[embassy_executor::task]
     pub async fn task_1(
         // STM32
         mut adc: Adc<'static, ADC1>,
-        mut pins: ( Peri<'static,PA0>, Peri<'static,PA1>, 
+        mut pins: ( Peri<'static,PA0>, Peri<'static,PA1>,
                     Peri<'static,PA4>, Peri<'static,PB0>,
-                    Peri<'static,PC1>, Peri<'static,PC0>, 
+                    Peri<'static,PC1>, Peri<'static,PC0>,
                     Peri<'static,PC2>, Peri<'static,PC3>),
         //
         hz: u64,
