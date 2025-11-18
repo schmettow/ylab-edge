@@ -2,44 +2,33 @@
 #![no_main]
 
 
-use ylab::*;
-use ylab::mcu;
-//use ylab::ysns::adc as yadc;
-use ylab::ytfk::bsu as ybsu;
+use ylab_stm32 as ylab;
+use ylab::ytfk::bsu;
+use ylab::{mcu, println, task,
+				Mutex, StaticCell,
+				Pull, ExtiInput,
+				UartInterruptHandler, Uart, UartConfig,
+				i2c, I2c, SharedI2cBus, SharedI2cDevice,
+				bind_interrupts, peripherals,
+				Spawner};
 use task::{lsm6_multi_task, bmi160_task};
 
-
-#[derive(Debug,  // used as fmt
-    Clone, Copy, // because next_state
-    PartialEq, Eq, )] // testing equality
-enum AppState {Send}
-
-//use mcu::adc;
-use mcu::exti::ExtiInput;
-use mcu::usart::{Config, Uart};
-use mcu::i2c;
-use mcu::{bind_interrupts, peripherals, usart};
-use {defmt_rtt as _, panic_probe as _};
-
 bind_interrupts!(struct Irqs {
-    USART2 => usart::InterruptHandler<peripherals::USART2>;
-    USART3 => usart::InterruptHandler<peripherals::USART3>;
+    USART2 => UartInterruptHandler<peripherals::USART2>;
+    USART3 => UartInterruptHandler<peripherals::USART3>;
     I2C1_EV => i2c::EventInterruptHandler<peripherals::I2C1>;
     I2C1_ER => i2c::ErrorInterruptHandler<peripherals::I2C1>;
     I2C3_EV => i2c::EventInterruptHandler<peripherals::I2C3>;
     I2C3_ER => i2c::ErrorInterruptHandler<peripherals::I2C3>;
 });
 
-use embassy_executor::Spawner;
-use ylab::task;
-
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
     let p = mcu::init(Default::default());
-    let mut config = Config::default();
+    let mut config = UartConfig::default();
     config.baudrate = 2_000_000;
     let usart = Uart::new(p.USART3, p.PC11, p.PC10, Irqs, p.DMA1_CH3, p.DMA1_CH1, config).unwrap();
-    match spawner.spawn(ybsu::task(usart)) {
+    match spawner.spawn(bsu::task(usart)) {
         Ok(_) => {println!("USART OK")},
         Err(e)  => {println!("USART connection failed: {:?}", e)},
     }
@@ -49,13 +38,13 @@ async fn main(spawner: Spawner) {
     };
     // MOI
     let moi_0
-        = ExtiInput::new(p.PA10,  p.EXTI10, ylab::Pull::Down,);
+        = ExtiInput::new(p.PA10,  p.EXTI10, Pull::Down,);
     let moi_1
-        = ExtiInput::new(p.PB3, p.EXTI3, ylab::Pull::Down);
+        = ExtiInput::new(p.PB3, p.EXTI3, Pull::Down);
     let moi_3
-        = ExtiInput::new(p.PA0,  p.EXTI0, ylab::Pull::Down,);
+        = ExtiInput::new(p.PA0,  p.EXTI0, Pull::Down,);
     let moi_4
-        = ExtiInput::new(p.PA1, p.EXTI1, ylab::Pull::Down);
+        = ExtiInput::new(p.PA1, p.EXTI1, Pull::Down);
 
     match spawner.spawn(task::moi_task(moi_0, moi_1, moi_3, moi_4)) {
     	Ok(_) => println!("MOI task OK"),
@@ -78,7 +67,7 @@ async fn main(spawner: Spawner) {
     let _i2c13 = SharedI2cDevice::new(i2c_bus_1);
     let _i2c14 = SharedI2cDevice::new(i2c_bus_1);
 
-    
+
     match spawner.spawn(bmi160_task(i2c11, 5, 2)) {
    		Ok(_) => println!("LSM task OK"),
  		Err(e) => println!("LSM task failed: {:?}", e),
@@ -103,6 +92,11 @@ async fn main(spawner: Spawner) {
 
 
 }
+
+#[derive(Debug,  // used as fmt
+    Clone, Copy, // because next_state
+    PartialEq, Eq, )] // testing equality
+enum AppState {Send}
 
 
 #[embassy_executor::task]

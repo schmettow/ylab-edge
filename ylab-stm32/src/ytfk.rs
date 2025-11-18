@@ -7,7 +7,7 @@ pub mod bsu {
     pub static SINK: Channel<RawMutex, Ytf, 8> = Channel::new();
 
     // USB
-    use mcu::usart::Uart;
+    //use mcu::usart::Uart;
     #[embassy_executor::task]
     pub async fn task(mut usart: Uart<'static, mcu::mode::Async>) {
         loop {

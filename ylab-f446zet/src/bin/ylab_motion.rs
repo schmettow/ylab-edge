@@ -6,7 +6,7 @@ use ylab::*;
 use ylab::mcu;
 use ylab::ysns::adc as yadc;
 use ylab::ytfk::bsu as ybsu;
-use task::{lsm6_multi_task, bmi160_task};
+use task::{lsm6_multi_task, lsm6_task};
 
 
 #[derive(Debug,  // used as fmt
@@ -78,13 +78,13 @@ async fn main(spawner: Spawner) {
     let _i2c13 = SharedI2cDevice::new(i2c_bus_1);
     let _i2c14 = SharedI2cDevice::new(i2c_bus_1);
 
-    
-    match spawner.spawn(task::lsm6_task(i2c11, 5, 2)) {
+
+    match spawner.spawn(lsm6_task(i2c11, 5, 2)) {
    		Ok(_) => println!("LSM task OK"),
  		Err(e) => println!("LSM task failed: {:?}", e),
     }
 
-    match spawner.spawn(task::lsm6_multi_task(i2c12, 5, 2, 2)) {
+    match spawner.spawn(lsm6_multi_task(i2c12, 5, 2, 2)) {
    		Ok(_) => println!("Lsm6: multi task OK"),
  		Err(e) => println!("Lsm6 multi task failed: {:?}", e),
     }
