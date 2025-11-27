@@ -9,13 +9,12 @@
 use ylab;
 use ylab::mcu;
 use mcu::gpio;
-//use ylab_lib as yll;
-//use yll::ysns::moi;
-
-use bt_hci::controller::ExternalController;
-use defmt::info;
-use embassy_executor::Spawner;
+use ylab_lib as yll;
+use yll::Spawner;
 //use embassy_time::{Duration, Timer};
+//use yll::ysns::moi;
+use ylab::info;
+use bt_hci::controller::ExternalController;
 use esp_hal::clock::CpuClock;
 use esp_hal::timer::timg::TimerGroup;
 use esp_radio::ble::controller::BleConnector;
