@@ -1,0 +1,64 @@
+[package]
+edition = "2024"
+name = "ylab-espc6"
+rust-version = "1.88"
+version = "0.1.0"
+
+[[bin]]
+name = "ylab-espc6"
+path = "./src/bin/main.rs"
+
+[lib]
+name = "ylab"
+path = "src/ylab/mod.rs"
+
+[dependencies]
+ylab-lib = { path = "../ylab-lib" }
+esp-hal = { version = "1.0.0", features = ["defmt", "esp32c6", "unstable"] }
+
+esp-rtos = { version = "0.2.0", features = [
+    "defmt",
+    "embassy",
+    "esp-alloc",
+    "esp-radio",
+    "esp32c6",
+] }
+
+defmt = "1.0.1"
+esp-bootloader-esp-idf = { version = "0.4.0", features = ["defmt", "esp32c6"] }
+
+bt-hci = "0.6.0"
+embassy-executor = { version = "0.9.1", features = ["defmt"] }
+embassy-time = { version = "0.5.0", features = ["defmt"] }
+embedded-io = { version = "0.7.1", features = ["defmt"] }
+embedded-io-async = { version = "0.7.0", features = ["defmt"] }
+esp-alloc = { version = "0.9.0", features = ["defmt"] }
+esp-radio = { version = "0.17.0", features = [
+    "ble",
+    "defmt",
+    "esp-alloc",
+    "esp32c6",
+    "unstable",
+] }
+rtt-target = { version = "0.6.2", features = ["defmt"] }
+trouble-host = { version = "0.5.0", features = ["gatt"] }
+
+critical-section = "1.2.0"
+static_cell = "2.1.1"
+embassy-sync = "0.7.2"
+embassy-futures = "0.1.2"
+
+
+[profile.dev]
+# Rust debug is too slow.
+# For debug builds always builds with some optimization
+opt-level = "s"
+
+[profile.release]
+codegen-units = 1        # LLVM can perform better optimizations using a single thread
+debug = 2
+debug-assertions = false
+incremental = false
+lto = 'fat'
+opt-level = 's'
+overflow-checks = false

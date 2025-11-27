@@ -5,7 +5,7 @@ pub mod bsu {
 
     // Channel
     pub static SINK: Channel<RawMutex, Ytf, 8> = Channel::new();
-    
+
     // USB
     use mcu::usart::Uart;
     #[embassy_executor::task]
@@ -17,9 +17,7 @@ pub mod bsu {
                 Ok(_) => usart.write(&msg).await.unwrap(),
                 Err(_) => {},
             }
-            usart.write(&msg).await.unwrap()
+            //usart.write(&msg).await.unwrap()
         }
     }
 }
-
- 

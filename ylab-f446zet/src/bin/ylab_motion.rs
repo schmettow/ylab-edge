@@ -6,7 +6,7 @@ use ylab::*;
 use ylab::mcu;
 use ylab::ysns::adc as yadc;
 use ylab::ytfk::bsu as ybsu;
-//use ylab_lib::ysns::moi;
+use task::{lsm6_multi_task, lsm6_task};
 
 
 #[derive(Debug,  // used as fmt
@@ -63,42 +63,38 @@ async fn main(spawner: Spawner) {
     }
     //ADC
     let adc1 = adc::Adc::new(p.ADC1);
-    /*match spawner.spawn(yadc::adcbank_1(adc1,
+    match spawner.spawn(yadc::adcbank_1(adc1,
                                 (p.PA0, p.PA1, p.PA4, p.PB0, p.PC1, p.PC0, p.PC3, p.PC2),
                                 2, 1)) {
                                 	Ok(_) => println!("ADC task OK"),
                               		Err(e) => println!("ADC task failed: {:?}", e),
-                                }*/
+                                }
 
     let i2c1 = I2c::new(p.I2C1, p.PB8, p.PB9, Irqs, p.DMA1_CH7, p.DMA1_CH0, Default::default());
     static I2C_BUS_1: StaticCell<SharedI2cBus> = StaticCell::new();
     let i2c_bus_1 = I2C_BUS_1.init(Mutex::new(i2c1));
     let i2c11 = SharedI2cDevice::new(i2c_bus_1);
     let i2c12 = SharedI2cDevice::new(i2c_bus_1);
-    let i2c13 = SharedI2cDevice::new(i2c_bus_1);
-    let i2c14 = SharedI2cDevice::new(i2c_bus_1);
+    let _i2c13 = SharedI2cDevice::new(i2c_bus_1);
+    let _i2c14 = SharedI2cDevice::new(i2c_bus_1);
 
-    match spawner.spawn(task::co2_task(i2c14, 2)) {
-   		Ok(_) => println!("CO2 task OK"),
- 		Err(e) => println!("CO2 task failed: {:?}", e),
-    }
 
-    /*match spawner.spawn(task::lsm6_task(i2c11, 5, 2)) {
+    match spawner.spawn(lsm6_task(i2c11, 5, 2)) {
    		Ok(_) => println!("LSM task OK"),
  		Err(e) => println!("LSM task failed: {:?}", e),
-    }*/
+    }
 
-    match spawner.spawn(task::lsm6_multi_task(i2c11, 5, 2, 2)) {
+    match spawner.spawn(lsm6_multi_task(i2c12, 5, 2, 2)) {
    		Ok(_) => println!("Lsm6: multi task OK"),
  		Err(e) => println!("Lsm6 multi task failed: {:?}", e),
     }
 
-    /*match spawner.spawn(task::ads_task(i2c12, 7, 3)) {
+    /*match spawner.spawn(task::ads_task(i2c13, 7, 3)) {
    		Ok(_) => println!("ADS task OK"),
  		Err(e) => println!("ADS task failed: {:?}", e),
     }*/
 
-    /*match spawner.spawn(task::bmi160_task(i2c13, 11, 4)) {
+    /*match spawner.spawn(task::bmi160_task(i2c14, 11, 4)) {
    		Ok(_) => println!("Bmi160 task OK"),
  		Err(e) => println!("Bmi168 task failed: {:?}", e),
     }*/

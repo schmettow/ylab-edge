@@ -1,0 +1,67 @@
+#![no_std]
+#![no_main]
+
+
+use ylab_stm32 as ylab;
+use ylab::ytfk::bsu;
+use ylab::{mcu, println, task, Pull, ExtiInput, UartInterruptHandler, Uart, UartConfig, bind_interrupts, peripherals};
+use {defmt_rtt as _, panic_probe as _};
+
+bind_interrupts!(struct Irqs {
+    USART2 => UartInterruptHandler<peripherals::USART2>;
+    USART3 => UartInterruptHandler<peripherals::USART3>;
+});
+
+use embassy_executor::Spawner;
+
+#[embassy_executor::main]
+async fn main(spawner: Spawner) {
+    let p = mcu::init(Default::default());
+    let mut config = UartConfig::default();
+    config.baudrate = 2_000_000;
+    let usart = Uart::new(p.USART3, p.PC11, p.PC10, Irqs, p.DMA1_CH3, p.DMA1_CH1, config).unwrap();
+    match spawner.spawn(bsu::task(usart)) {
+        Ok(_) => {println!("USART OK")},
+        Err(e)  => {println!("USART connection failed: {:?}", e)},
+    }
+    match spawner.spawn(control_task()){
+    	Ok(_) => println!("Control task OK"),
+     	Err(e) => println!("Control task failed: {:?}", e),
+    };
+    // MOI
+    let moi_0
+        = ExtiInput::new(p.PA10,  p.EXTI10, Pull::Down,);
+    let moi_1
+        = ExtiInput::new(p.PB3, p.EXTI3, Pull::Down);
+    let moi_3
+        = ExtiInput::new(p.PA0,  p.EXTI0, Pull::Down,);
+    let moi_4
+        = ExtiInput::new(p.PA1, p.EXTI1, Pull::Down);
+
+    match spawner.spawn(task::moi_task(moi_0, moi_1, moi_3, moi_4)) {
+    	Ok(_) => println!("MOI task OK"),
+   		Err(e) => println!("MOI task failed: {:?}", e),
+    }
+
+    //ADC
+    //let mut delay = Delay;
+    /*let adc1 = adc::Adc::new(p.ADC1);
+    match spawner.spawn(yadc::adcbank_1(adc1,
+                                (p.PA0, p.PA1, p.PA4, p.PB0, p.PC1, p.PC0, p.PC3, p.PC2),
+                                3, 1)) {
+                                	Ok(_) => println!("ADC task OK"),
+                              		Err(e) => println!("ADC task failed: {:?}", e),
+                                }*/
+}
+
+#[derive(Debug,  // used as fmt
+    Clone, Copy, // because next_state
+    PartialEq, Eq, )] // testing equality
+enum AppState {Send}
+
+#[embassy_executor::task]
+async fn control_task() {
+    let _state = AppState::Send;
+    //yadc::SAMPLE.store(true, ORD);
+    //moi::SAMPLE.store(true, ORD);
+}

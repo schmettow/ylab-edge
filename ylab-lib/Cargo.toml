@@ -1,6 +1,6 @@
 [package]
 name = "ylab-lib"
-version = "0.1.0"
+version = "0.3.0"
 edition = "2024"
 
 [lib]
@@ -31,6 +31,7 @@ log = "0.4.28"
 # Devices
 ssd1306 = { version = "0.10.0", features = ["async"] }
 scd4x = { version = "0.4.1", features = ["embedded-hal-async", "scd41"] }
+max3010x = { git = "https://github.com/schmettow/async-max3010x-rs" }
 bmi160 = { git = "https://github.com/schmettow/async-bmi160-rs" }
 tlv493d = { git = "https://github.com/schmettow/async-tlv493d-rs" }
 lsm6dsox = { git = "https://github.com/schmettow/async-lsm6dsox-rs" }

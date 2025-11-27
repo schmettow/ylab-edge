@@ -72,19 +72,6 @@ async fn main(spawner: Spawner) {
 }
 
 
-/*use mcu::gpio::Input;
-use mcu::gpio::Pull;
-use mcu::peripherals::{PD0, PD1, PD2, PD3};*/
-
-/*#[embassy_executor::task]
-async fn moi_task(
-    pin_0: ExtiInput<'static>,
-    pin_1: ExtiInput<'static>,
-    pin_2: ExtiInput<'static>,
-    pin_3: ExtiInput<'static>)
-    {
-	moi::inner_task(pin_0, pin_1, pin_2, pin_3, 0, ylab::ytfk::bsu::SINK.sender()).await;
-}*/
 
 
 #[embassy_executor::task]

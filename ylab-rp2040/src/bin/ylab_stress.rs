@@ -17,10 +17,6 @@ use yll::ysns::moi;
 use yll::yuii::btn as ybtn;
 use yll::yuio::led as yled;
 use ylab::task::{moi_task, btn20_task, led_task, display_task_0, ads_task_1, lsm6_task_0};
-use yll::ysns::yco2;
-//use yll::yuii::btn as ybtn;
-//use yll::yuio::led as yled;
-//use ydsp::TEXT as DISP;
 use ylab::*;
 use ysns::adc as yadc;
 use ytfk::bsu as ybsu;
@@ -50,7 +46,7 @@ bind_interrupts!(struct Irqs {
     I2C1_IRQ => i2c::InterruptHandler<I2C1>;
     ADC_IRQ_FIFO => adc::InterruptHandler;
 });
-use ylab::task;
+
 
 use defmt::*;
 use embassy_executor::Executor;
@@ -91,8 +87,6 @@ fn init() -> ! {
             	Ok(_) => {},
              	Err(e) => debug!("Lsm6 task failed: {:?}", e),
             }
-            //unwrap!(spawner.spawn(ads_task_1(i2c11, 5, 3)));
-            //unwrap!(spawner.spawn(yuio::disp::task_1(i2c_bus_1)));
         })
     });
 
