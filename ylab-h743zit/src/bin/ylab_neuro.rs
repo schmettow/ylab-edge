@@ -30,7 +30,7 @@ use yll::{Mutex, NoopRawMutex, StaticCell};
 static SPI_BUS: StaticCell<Mutex<NoopRawMutex, Spi<Async>>> = StaticCell::new();
 
 bind_interrupts!(struct Irqs {
-    //USART2 => usart::InterruptHandler<peripherals::USART2>;
+    USART1 => usart::InterruptHandler<peripherals::USART1>;
     UART7 => usart::InterruptHandler<peripherals::UART7>;
 });
 
@@ -66,13 +66,13 @@ async fn main(spawner: yll::Spawner) {
         //config.rcc.supply_config = SupplyConfig::DirectSMPS;
     }
     let p = embassy_stm32::init(config);
-    //let p = embassy_stm32::init(Default::default());
     let mut config = Config::default();
     config.baudrate = 2_000_000;
-    let usart = Uart::new(p.UART7, p.PF6, p.PF7, Irqs, p.DMA1_CH0, p.DMA1_CH1, config).unwrap();
+    //let usart = Uart::new(p.UART7, p.PF6, p.PF7, Irqs, p.DMA1_CH0, p.DMA1_CH1, config).unwrap();
+    let usart = Uart::new(p.USART1, p.PB15, p.PB14, Irqs, p.DMA1_CH0, p.DMA1_CH1, config).unwrap();
     match spawner.spawn(ybsu::task(usart)) {
         Ok(_) => {
-            println!("USART OK")
+            println!("USART task has returned.")
         }
         Err(e) => {
             println!("USART connection failed: {:?}", e)
@@ -109,14 +109,7 @@ async fn main(spawner: yll::Spawner) {
     let mut sensor = yds::Sensor::new(spi_dev, 0, 100);
     println!("Sensor device created");
 
-    /*match sensor.init().await {
-        Ok(_) => {
-            println!("Sensor init OK");
-        }
-        Err(e) => {
-            println!("Sensor init failed");
-        }
-    };*/
+    // Sensor init
 
     if let Ok(_) = sensor.sensor.write_command_async(Command::RESET).await {
         println!("Sensor reset OK");
@@ -135,8 +128,10 @@ async fn main(spawner: yll::Spawner) {
     if let Ok(_) = sensor.sensor.read_device_id_async().await {
         println!("Sensor ID OK");
     } else {
-        println!("Sensor ID OK");
+        println!("Sensor ID failed to acquire");
     }
+
+    //
 
     let mut ticker = Ticker::every(ylab::Duration::from_millis(4));
     let mut count = 0;

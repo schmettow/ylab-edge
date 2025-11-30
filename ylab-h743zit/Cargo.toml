@@ -23,7 +23,7 @@ panic-probe = { version = "1.0.0", features = ["print-defmt"] }
 
 embassy-stm32 = { version = "0.4.0", features = [
     "defmt",
-    "stm32h742zi",
+    "stm32h743zi",
     "memory-x",
     "time-driver-any",
     "exti",
