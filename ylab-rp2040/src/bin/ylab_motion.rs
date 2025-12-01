@@ -85,8 +85,16 @@ fn init() -> ! {
     spawn_core1(p.CORE1, unsafe { &mut CORE1_STACK }, move || {
         let executor1 = EXECUTOR1.init(Executor::new());
         executor1.run(|spawner| {
-        	spawner.spawn(task::lsm6_multi_task_1(i2c11, 3, 3, 2)).unwrap();
-         	spawner .spawn(task::ads_task_0(i2c01, 5, 3)).unwrap();
+        	match spawner.spawn(task::lsm6_multi_task_1(i2c11, 29, 3, 2)) {
+            //match spawner.spawn(task::lsm6_task_1(i2c11, 29, 3)) {
+            	Ok(_) => println!("All happy!"),
+             	Err(e) => println!("Lsm6 on I2C1 failed: {}", e),
+            };
+            match spawner .spawn(task::lsm6_multi_task_0(i2c01, 31, 11, 2)) {
+          	//match spawner .spawn(task::lsm6_task_0(i2c01, 31, 11)) {
+          		Ok(_) => println!("All happy!"),
+           		Err(e) => println!("Lsm6 on I2C0 failed: {}", e),
+           };
         })
     });
 
@@ -106,7 +114,7 @@ fn init() -> ! {
         // ADC task
         let adc0: adc::Adc<'_, Async> = adc::Adc::new(p.ADC, Irqs, adc::Config::default());
         spawner
-            .spawn(yadc::task(adc0, p.PIN_26, p.PIN_27, p.PIN_28, 0, 1))
+            .spawn(yadc::task(adc0, p.PIN_26, p.PIN_27, p.PIN_28, 53, 1))
             .unwrap();
 
         // task for controlling the led
@@ -115,8 +123,9 @@ fn init() -> ! {
         unwrap!(spawner.spawn(led_task(led)));
         // task for listening to button presses.
         unwrap!(spawner.spawn(btn20_task(p.PIN_20.into())));
-        // task listening for data packeges to send up the line (reverse USB ;)
+        // Writing to USB
         unwrap!(spawner.spawn(ybsu::logger_task(p.USB, LOG_LEVEL)));
+        // task listening for data packages to send up the line (reverse USB ;)
         unwrap!(spawner.spawn(ybsu::task()));
         // task to control sensors, storage and ui
         unwrap!(spawner.spawn(control_task()));

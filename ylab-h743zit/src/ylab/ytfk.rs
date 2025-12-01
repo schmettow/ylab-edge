@@ -15,7 +15,7 @@ pub mod bsu {
             let mut msg: Vec<u8, 256> = Vec::new();
             match core::write!(&mut msg, "{}", sample) {
                 Ok(_) => usart.write(&msg).await.unwrap(),
-                Err(_) => {},
+                Err(_) => println!("Csv write failed"),
             }
             //usart.write(&msg).await.unwrap()
         }

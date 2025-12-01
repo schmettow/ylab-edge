@@ -10,21 +10,27 @@ name = "ylab_stm32"
 path = "src/mod.rs"
 
 [features]
-f446ze = [  "embassy-stm32/defmt",
-            "embassy-stm32/stm32f446ze",
-            "embassy-stm32/memory-x",
-            "embassy-stm32/time-driver-any",
-            "embassy-stm32/exti",]
-f446re = [  "embassy-stm32/defmt",
-            "embassy-stm32/stm32f446re",
-            "embassy-stm32/memory-x",
-            "embassy-stm32/time-driver-any",
-            "embassy-stm32/exti",]
-h742zi = [  "embassy-stm32/defmt",
-            "embassy-stm32/stm32h742zi",
-            "embassy-stm32/memory-x",
-            "embassy-stm32/time-driver-any",
-            "embassy-stm32/exti",]
+f446ze = [
+    "embassy-stm32/defmt",
+    "embassy-stm32/stm32f446ze",
+    "embassy-stm32/memory-x",
+    "embassy-stm32/time-driver-any",
+    "embassy-stm32/exti",
+]
+f446re = [
+    "embassy-stm32/defmt",
+    "embassy-stm32/stm32f446re",
+    "embassy-stm32/memory-x",
+    "embassy-stm32/time-driver-any",
+    "embassy-stm32/exti",
+]
+h742zi = [
+    "embassy-stm32/defmt",
+    "embassy-stm32/stm32h743zi",
+    "embassy-stm32/memory-x",
+    "embassy-stm32/time-driver-any",
+    "embassy-stm32/exti",
+]
 default = []
 
 [dependencies]

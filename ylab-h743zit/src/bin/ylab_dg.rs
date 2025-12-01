@@ -22,7 +22,7 @@ use mcu::{bind_interrupts, peripherals, usart};
 use {defmt_rtt as _, panic_probe as _};
 
 bind_interrupts!(struct Irqs {
-    //USART2 => usart::InterruptHandler<peripherals::USART2>;
+    USART3 => usart::InterruptHandler<peripherals::USART3>;
     UART7 => usart::InterruptHandler<peripherals::UART7>;
 });
 
@@ -33,8 +33,8 @@ async fn main(spawner: Spawner) {
     let p = mcu::init(Default::default());
     let mut config = Config::default();
     config.baudrate = 2_000_000;
-    //let usart = Uart::new(p.USART3, p.PD9, p.PD8, Irqs, p.DMA1_CH3, p.DMA1_CH1, config).unwrap();
-    let usart = Uart::new(p.UART7, p.PF6, p.PF7, Irqs, p.DMA1_CH0, p.DMA1_CH1, config).unwrap();
+    let usart = Uart::new(p.USART3, p.PD9, p.PD8, Irqs, p.DMA1_CH3, p.DMA1_CH1, config).unwrap();
+    //let usart = Uart::new(p.UART7, p.PF6, p.PF7, Irqs, p.DMA1_CH0, p.DMA1_CH1, config).unwrap();
     match spawner.spawn(ybsu::task(usart)) {
         Ok(_) => {println!("USART OK")},
         Err(e)  => {println!("USART connection failed: {:?}", e)},

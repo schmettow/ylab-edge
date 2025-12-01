@@ -51,6 +51,12 @@ pub async fn lsm6_task_0(i2c: SharedI2c0, hz: u64, id: u8) {
 }
 
 #[embassy_executor::task]
+pub async fn lsm6_task_1(i2c: SharedI2c1, hz: u64, id: u8) {
+	yxz_lsm6::task(i2c, hz, id, SINK.sender()).await;
+}
+
+
+#[embassy_executor::task]
 pub async fn max3010x_task_0(i2c: SharedI2c0, rate: yirt_max::SamplingRate, id: u8) {
 	match yirt_max::task(i2c, rate , id, SINK.sender()).await { // <---because we do proper error handling in yirt_max
 		Ok(_) => println!("Warning: task should never return (max3010x)"),

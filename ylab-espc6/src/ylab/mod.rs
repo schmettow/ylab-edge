@@ -10,6 +10,7 @@ pub use yll::yuii;
 pub use yll::yuio;
 pub use yll::*;
 pub use yll::ybus::*;
+pub use defmt::{info, debug};
 
 pub mod ysns; // Ylab sensors
 pub mod ytfk;
