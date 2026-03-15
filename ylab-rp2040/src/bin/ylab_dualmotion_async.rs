@@ -78,7 +78,6 @@ fn init() -> ! {
     static I2C_BUS_1: StaticCell<SharedI2cBus<I2C1>> = StaticCell::new();
     let i2c1 = i2c::I2c::new_async(p.I2C1, p.PIN_3, p.PIN_2, Irqs, config);
     let i2c_bus_1 = I2C_BUS_1.init(Mutex::new(i2c1));
-    #[allow(unused_variables)]
     let i2c11 = SharedI2cDevice::new(i2c_bus_1);
 
     // CORE 1
@@ -86,10 +85,8 @@ fn init() -> ! {
     spawn_core1(p.CORE1, unsafe { &mut CORE1_STACK }, move || {
         let executor1 = EXECUTOR1.init(Executor::new());
         executor1.run(|spawner| {
-            match spawner .spawn(task::lsm6_multi_task_0(i2c01, 31, 2, 4)) {
-          		Ok(_) => println!("All happy!"),
-           		Err(e) => println!("Lsm6 on I2C0 failed: {}", e),
-           };
+        	spawner.spawn(task::lsm6_task_1(i2c11, 3, 2)).unwrap();
+         	spawner .spawn(task::lsm6_task_0(i2c01, 5, 3)).unwrap();
         })
     });
 
@@ -109,7 +106,7 @@ fn init() -> ! {
         // ADC task
         let adc0: adc::Adc<'_, Async> = adc::Adc::new(p.ADC, Irqs, adc::Config::default());
         spawner
-            .spawn(yadc::task(adc0, p.PIN_26, p.PIN_27, p.PIN_28, 53, 1))
+            .spawn(yadc::task(adc0, p.PIN_26, p.PIN_27, p.PIN_28, 0, 1))
             .unwrap();
 
         // task for controlling the led
@@ -118,9 +115,8 @@ fn init() -> ! {
         unwrap!(spawner.spawn(led_task(led)));
         // task for listening to button presses.
         unwrap!(spawner.spawn(btn20_task(p.PIN_20.into())));
-        // Writing to USB
+        // task listening for data packeges to send up the line (reverse USB ;)
         unwrap!(spawner.spawn(ybsu::logger_task(p.USB, LOG_LEVEL)));
-        // task listening for data packages to send up the line (reverse USB ;)
         unwrap!(spawner.spawn(ybsu::task()));
         // task to control sensors, storage and ui
         unwrap!(spawner.spawn(control_task()));

@@ -16,8 +16,8 @@ use ylab_lib as yll;
 use yll::ysns::moi;
 use yll::yuii::btn as ybtn;
 use yll::yuio::led as yled;
-use ylab::task::{moi_task, btn20_task, led_task, display_task_0, co2_task_0, max3010x_task_1, bme280_task_1};
-use ylab_lib::ysns::yirt_max;
+use yll::ysns::yirt_max;
+use ylab::task::{moi_task, btn20_task, led_task, display_task_0, co2_task_0, max3010x_task_1};
 use ylab::*;
 use ysns::adc as yadc;
 use ytfk::bsu as ybsu;
@@ -62,7 +62,7 @@ fn init() -> ! {
     // Init I2C shared busses
     let config = Config::default();
 
-    // Grove port 1
+    // 2 x I2C on Grove 1
     static I2C_BUS_0: StaticCell<SharedI2cBus<I2C0>> = StaticCell::new();
     let i2c0 = i2c::I2c::new_async(p.I2C0, p.PIN_1, p.PIN_0, Irqs, config);
     let i2c_bus_0 = I2C_BUS_0.init(Mutex::new(i2c0));
@@ -70,29 +70,24 @@ fn init() -> ! {
     let i2c01 = SharedI2cDevice::new(i2c_bus_0);
     let i2c02 = SharedI2cDevice::new(i2c_bus_0);
 
-    // Grove port 2
+    // I2C on Grove 2
     static I2C_BUS_1: StaticCell<SharedI2cBus<I2C1>> = StaticCell::new();
     let i2c1 = i2c::I2c::new_async(p.I2C1, p.PIN_3, p.PIN_2, Irqs, config);
     let i2c_bus_1 = I2C_BUS_1.init(Mutex::new(i2c1));
     let i2c11 = SharedI2cDevice::new(i2c_bus_1);
-    let i2c12 = SharedI2cDevice::new(i2c_bus_1);
 
     #[allow(static_mut_refs)]
     spawn_core1(p.CORE1, unsafe { &mut CORE1_STACK }, move || {
         let executor1 = EXECUTOR1.init(Executor::new());
         executor1.run(|spawner| {
         	// CO2 (scd4)
-            match spawner.spawn(co2_task_0(i2c01, 5, 2)) {
+            match spawner.spawn(co2_task_0(i2c01, 2)) {
             	Ok(_) => {},
              	Err(e) => debug!("CO2 task failed: {:?}", e),
             }
-            match spawner.spawn(bme280_task_1(i2c11, 5, 3)) {
+            match spawner.spawn(max3010x_task_1(i2c11, yirt_max::SamplingRate::Sps50, 3)) {
             	Ok(_) => {},
-             	Err(e) => debug!("Bme280 task failed: {:?}", e),
-            }
-            match spawner.spawn(max3010x_task_1(i2c12, yirt_max::SamplingRate::Sps50, 4)) {
-            	Ok(_) => {},
-             	Err(e) => debug!("Max30100 task failed: {:?}", e),
+             	Err(e) => debug!("Max3010x task failed: {:?}", e),
             }
         })
     });
@@ -103,7 +98,7 @@ fn init() -> ! {
         use mcu::gpio::{Output, Level};
         let led = Output::new(p.PIN_25, Level::Low);
         unwrap!(spawner.spawn(led_task(led)));
-        //unwrap!(spawner.spawn(display_task_0(i2c02)));
+        unwrap!(spawner.spawn(display_task_0(i2c02)));
         // listening to button presses.
         unwrap!(spawner.spawn(btn20_task(p.PIN_20.into())));
         //  listening for data packeges to send up the line (reverse USB ;)
@@ -122,17 +117,17 @@ fn init() -> ! {
             ))
             .unwrap();
         // ADC task
-        /*let adc0: adc::Adc<'_, Async> = adc::Adc::new(p.ADC, Irqs, adc::Config::default());
+        let adc0: adc::Adc<'_, Async> = adc::Adc::new(p.ADC, Irqs, adc::Config::default());
         spawner
             .spawn(yadc::task(
                 adc0,
                 p.PIN_26.into(),
                 p.PIN_27.into(),
                 p.PIN_28.into(),
-                7,
+                201,
                 1,
             ))
-           .unwrap();*/
+            .unwrap();
     });
 }
 

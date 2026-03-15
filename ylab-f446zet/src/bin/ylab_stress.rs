@@ -65,13 +65,14 @@ async fn main(spawner: Spawner) {
     let adc1 = adc::Adc::new(p.ADC1);
     spawner.spawn(yadc::adcbank_1(adc1,
                                 (p.PA0, p.PA1, p.PA4, p.PB0, p.PC1, p.PC0, p.PC3, p.PC2),
-                                197, 1)).unwrap();
+                                50, 1)).unwrap();
 
     // I2C1
     let i2c1 = I2c::new(p.I2C1, p.PB8, p.PB9, Irqs, p.DMA1_CH6, p.DMA1_CH0, Default::default());
     static I2C_BUS_1: StaticCell<SharedI2cBus> = StaticCell::new();
     let i2c_bus_1 = I2C_BUS_1.init(Mutex::new(i2c1));
-
+    let i2c11 = SharedI2cDevice::new(i2c_bus_1);
+    let i2c12 = SharedI2cDevice::new(i2c_bus_1);
     // I2C 2
     /*let i2c2 = I2c::new(p.I2C2, p.PF1, p.PB11, Irqs, p.DMA1_CH7, p.DMA1_CH3, Default::default());
     static I2C_BUS_2: StaticCell<SharedI2cBus> = StaticCell::new();
@@ -81,18 +82,17 @@ async fn main(spawner: Spawner) {
     let i2c3 = I2c::new(p.I2C3, p.PA8, p.PB4, Irqs, p.DMA1_CH4, p.DMA1_CH2, Default::default());
     static I2C_BUS_3: StaticCell<SharedI2cBus> = StaticCell::new();
     let i2c_bus_3 = I2C_BUS_3.init(Mutex::new(i2c3));
-
+    let i2c31 = SharedI2cDevice::new(i2c_bus_3);
+    let i2c32 = SharedI2cDevice::new(i2c_bus_3);
     /*// I2C 4
     let i2c4 = I2c::new(p.I2C4, p.PF14, p.PF15, Irqs, p.DMA1_CH2, p.DMA1_CH5, Default::default());
     static I2C_BUS_4: StaticCell<SharedI2cBus> = StaticCell::new();
     let i2c_bus_4 = I2C_BUS_4.init(Mutex::new(i2c4));*/
 
-    let i2c11 = SharedI2cDevice::new(i2c_bus_1);
-    spawner.spawn(task::yirt_task(i2c11, ylab_lib::ysns::yirt_max::SamplingRate::Sps50, 2)).unwrap();
-    let i2c12 = SharedI2cDevice::new(i2c_bus_1);
-    spawner.spawn(task::bme280_task(i2c12, 5, 3)).unwrap();
-    let i2c31 = SharedI2cDevice::new(i2c_bus_3);
-    spawner.spawn(task::co2_task(i2c31, 5, 4)).unwrap();
+
+    spawner.spawn(task::co2_task(i2c11, 5, 4)).unwrap();
+    spawner.spawn(task::yirt_task(i2c32, ylab_lib::ysns::yirt_max::SamplingRate::Sps50, 2)).unwrap();
+
 
 
 

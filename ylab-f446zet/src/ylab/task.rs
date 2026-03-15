@@ -60,8 +60,13 @@ pub async fn bmi160_task(i2c: SharedI2cDevice, hz: u64, id: u8) {
 }
 
 #[embassy_executor::task]
-pub async fn co2_task(i2c: SharedI2cDevice, id: u8) {
-	match yco2::task(i2c, id, SINK.sender()).await {
+pub async fn bme280_task(i2c: SharedI2cDevice, hz: u64, id: u8) {
+	bme280::inner_task(i2c, hz, id, SINK.sender()).await;
+}
+
+#[embassy_executor::task]
+pub async fn co2_task(i2c: SharedI2cDevice, hz: u64, id: u8) {
+	match yco2::task(i2c, hz, id, SINK.sender()).await {
 		Ok(_) => println!("Co2 task ended okay."),
 		Err(_) => println!("Co2 task failed")
 	}

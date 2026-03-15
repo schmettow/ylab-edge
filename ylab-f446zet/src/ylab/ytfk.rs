@@ -13,7 +13,7 @@ pub mod bsu {
         loop {
             let sample: Ytf = SINK.receive().await;
             let mut msg: Vec<u8, 256> = Vec::new();
-            match core::write!(&mut msg, "{}", sample) {
+            match core::write!(&mut msg, "{}\n", sample) {
                 Ok(_) => {usart.write(&msg).await.unwrap()},
                 Err(_) => {},
             }

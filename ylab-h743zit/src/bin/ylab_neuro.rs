@@ -30,6 +30,7 @@ use yll::{Mutex, NoopRawMutex, StaticCell};
 static SPI_BUS: StaticCell<Mutex<NoopRawMutex, Spi<Async>>> = StaticCell::new();
 
 bind_interrupts!(struct Irqs {
+	//OTG_FS => usb::InterruptHandler<peripherals::USB_OTG_FS>;
     USART1 => usart::InterruptHandler<peripherals::USART1>;
     UART4 => usart::InterruptHandler<peripherals::UART4>;
 });

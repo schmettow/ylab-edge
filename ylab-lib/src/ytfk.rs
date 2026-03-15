@@ -14,7 +14,7 @@ trait YtfSend {
 impl YtfSend for Ytf {
     fn msg_csv(&self) -> Result<YtfLine, core::fmt::Error> {
         let mut msg: YtfLine = Vec::new();
-        match core::write!(&mut msg, "{}", self) {
+        match core::write!(&mut msg, "{}\n", self) {
             Ok(_) => return Ok(msg),
             Err(e) => return Err(e),
         }

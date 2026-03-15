@@ -1,7 +1,7 @@
 use super::*;
 use ylab_lib as yll;
 use yll::ysns::println;
-use yll::ysns::{moi, yxz_bmi160, yxz_lsm6, ads1115, yco2, yirt_max};
+use yll::ysns::{moi, yxz_bmi160, yxz_lsm6, ads1115, yco2, yirt_max, bme280};
 use yll::yuii::btn;
 use yll::yuio::led;
 use mcu::gpio::{Input, Pull, Output};
@@ -84,13 +84,31 @@ pub async fn bmi160_task_0(i2c: SharedI2c0, hz: u64, id: u8) {
 }
 
 #[embassy_executor::task]
+pub async fn bme280_task_0(i2c: SharedI2c0, hz: u64, id: u8) {
+	bme280::inner_task(i2c, hz, id, SINK.sender()).await;
+}
+
+#[embassy_executor::task]
+pub async fn bme280_task_1(i2c: SharedI2c1, hz: u64, id: u8) {
+	bme280::inner_task(i2c, hz, id, SINK.sender()).await;
+}
+
+#[embassy_executor::task]
 pub async fn ads_task_1(i2c: SharedI2c1,hz: u64, id: u8) {
 	yll::ysns::ads1115::inner_task(i2c, hz, id, SINK.sender()).await;
 }
 
 #[embassy_executor::task]
-pub async fn co2_task_0(i2c: SharedI2c0, id: u8) {
-	match yco2::task(i2c, id, SINK.sender()).await {
+pub async fn co2_task_0(i2c: SharedI2c0, hz: u64, id: u8) {
+	match yco2::task(i2c, hz, id, SINK.sender()).await {
+		Ok(_) => println!("Warning: task should never return (co2)"),
+		Err(_) => println!("CO2 task failed"),
+	}
+}
+
+#[embassy_executor::task]
+pub async fn co2_task_1(i2c: SharedI2c1, hz: u64, id: u8) {
+	match yco2::task(i2c, hz, id, SINK.sender()).await {
 		Ok(_) => println!("Warning: task should never return (co2)"),
 		Err(_) => println!("CO2 task failed"),
 	}

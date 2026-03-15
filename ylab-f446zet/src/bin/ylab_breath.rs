@@ -66,9 +66,8 @@ async fn main(spawner: Spawner) {
     static I2C_BUS_1: StaticCell<SharedI2cBus> = StaticCell::new();
     let i2c_bus_1 = I2C_BUS_1.init(Mutex::new(i2c1));
 
-
     let i2c11 = SharedI2cDevice::new(i2c_bus_1);
-    spawner.spawn(co2_task(i2c11, 5)).unwrap();
+    spawner.spawn(co2_task(i2c11, 5, 2)).unwrap();
 
     // Yrt_max
     let i2c12 = SharedI2cDevice::new(i2c_bus_1);
