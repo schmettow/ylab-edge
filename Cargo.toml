@@ -1,6 +1,16 @@
 [workspace]
 resolver = "2"
-members = ["ylab-lib", "ylab-rp2040", "ylab-stm32","ylab-f446zet","ylab-f446re", "ylab-h743zit", "ylab-espc6"]
+members = [
+    "ylab-lib",
+    "ylab-rp2040",
+    "ylab-stm32",
+    "ylab-f446zet",
+    "ylab-f446re",
+    "ylab-h743zit",
+    "ylab-espc6",
+]
+
+workspace.exclude = ["ylab-lib"]
 
 [patch.crates-io]
 
