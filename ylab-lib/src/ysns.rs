@@ -6,7 +6,7 @@ pub use defmt::Format;
 pub use defmt::println;
 
 #[derive(Debug, Clone, Format)]
-pub enum YsenseErr<> {
+pub enum YsenseErr {
     Init,
     Read,
     Task,
@@ -14,47 +14,47 @@ pub enum YsenseErr<> {
 
 /*pub trait Ysense<M, BUS, const N: usize>
 where 	M: SharedDeviceMutex,
-		BUS: embedded_hal_async::i2c::I2c,
-	{
+        BUS: embedded_hal_async::i2c::I2c,
+    {
     const id: usize;
     const label: &str;
-	type Rate; // enum from driver crate rate
-	type Measure; // Sensor output type
-	type Error; // enum from driver crate
+    type Rate; // enum from driver crate rate
+    type Measure; // Sensor output type
+    type Error; // enum from driver crate
     type Reading = [Self::Measure; N];
     type Sample = ydata::Sample<Self::Measure, N>;
     async fn init(&mut self, i2c: SharedI2cDevice) -> Result<(), YsenseErr>;
     async fn set_rate(&mut self, rate: Self::Rate) -> Result<(), Self::Error>;
     async fn read(&self) -> Result<Self::Reading, Self::Error>;
     async fn sample(&self) -> Result<Self::Sample, Self::Error> {
-    	match self.read().await {
-     		Ok(r) => {	let time = Instant::now();
-	      				Ok(Self::Sample {
-				       		sensory: Self::id,
-				         	time: time,
-				          	read: r,})
-       					},
+        match self.read().await {
+             Ok(r) => {	let time = Instant::now();
+                          Ok(Self::Sample {
+                               sensory: Self::id,
+                             time: time,
+                              read: r,})
+                           },
             Err(e) => println!("{}: Read failed {:?} ", Self::label.into(), e),
-     	}
+         }
     }
 }*/
 
 /*pub mod max3 {
-	use super::*;
+    use super::*;
     use max3010x as max3;
 
     impl Ysense for max3::Max3010x {
-    	const id: usize = 11;
-     	const label: &str = "";
-    	type Rate = max3::SamplingRate;
-     	type Measure = u16;
-      	type Error = max3::Error;
-       	const N: usize = 4;
+        const id: usize = 11;
+         const label: &str = "";
+        type Rate = max3::SamplingRate;
+         type Measure = u16;
+          type Error = max3::Error;
+           const N: usize = 4;
         async fn init(&mut self, SharedI2cDevice) {
-        	Ok(())
+            Ok(())
         };
         async fn set_rate(rate: Rate) {
-        	OK(())
+            OK(())
         }
         async fn read(&self)
     }
@@ -62,8 +62,8 @@ where 	M: SharedDeviceMutex,
 
 pub mod yirt_max {
     use super::*;
-    use max3010x::*;
     pub use max3010x::SamplingRate;
+    use max3010x::*;
 
     /* control channels */
     pub static READY: AtomicBool = AtomicBool::new(false);
@@ -79,13 +79,13 @@ pub mod yirt_max {
         rate: SamplingRate,
         sensory: u8,
         sink: YtfSender<'static>,
-    	) -> Result<(), Error<BUS>>
-     where
+    ) -> Result<(), Error<BUS>>
+    where
         M: SharedDeviceMutex,
         BUS: embedded_hal_async::i2c::I2c,
     {
-    	let mut sensor = Max3010x::new_max30102(i2c);
-     	println!("Max3 wake!");
+        let mut sensor = Max3010x::new_max30102(i2c);
+        println!("Max3 wake!");
         sensor.wake_up().await?;
         println!("Max3 awake");
         //let mut sensor = sensor.into_oximeter().await?;
@@ -94,28 +94,39 @@ pub mod yirt_max {
         sensor.set_pulse_amplitude(Led::All, 15).await?;
         sensor.set_sampling_rate(rate).await?;
         sensor.set_sample_averaging(SampleAveraging::Sa4).await?;
-        sensor.set_led_time_slots([
-            TimeSlot::Led1,
-            TimeSlot::Led2,
-            TimeSlot::Led2,
-            TimeSlot::Led1
-        ]).await?;
+        sensor
+            .set_led_time_slots([
+                TimeSlot::Led1,
+                TimeSlot::Led2,
+                TimeSlot::Led2,
+                TimeSlot::Led1,
+            ])
+            .await?;
         sensor.enable_fifo_rollover().await?;
         println!("Max3010x all set");
         let mut read_buf = [0 as Measure; N];
         //let mut ticker = Ticker::every(Duration::from_hz(hz));
         loop {
             match sensor.read_fifo(&mut read_buf).await {
-	            Ok(i) => if i > 0 {	sink.send(Sample{sensory: sensory,
-         				 				time: Instant::now(),
-              			 				read: read_buf,}.into()).await;
-										//println!("Max3: {:?}", read_buf)
-										}
-						else {},
-				Err(_) => println!("Max3 read failed")
+                Ok(i) => {
+                    if i > 0 {
+                        sink.send(
+                            Sample {
+                                sensory: sensory,
+                                time: Instant::now(),
+                                read: read_buf,
+                            }
+                            .into(),
+                        )
+                        .await;
+                    //println!("Max3: {:?}", read_buf)
+                    } else {
+                    }
+                }
+                Err(_) => println!("Max3 read failed"),
             }
-    	}
-	}
+        }
+    }
 }
 
 pub mod yxz_tlv {
@@ -265,7 +276,7 @@ pub mod yxz_bmi160 {
                     .with_humidity_oversampling(Oversampling::X1)
                     .with_sensor_mode(SensorMode::Normal)
                     .with_standby_duration(StandbyDuration::Millis1000)
-                   	.
+                       .
             ).await {
             Ok(_) => {
                 println!("BME280 setup succeeded");
@@ -279,11 +290,11 @@ pub mod yxz_bmi160 {
         loop {
             ticker.next().await;
             if RECORD.load(ORD) {
-           	match sensor.read().await {
+               match sensor.read().await {
                         Ok(data) => {
-                        	reading = [data.temperature, data.humidity, data.pressure];
-                        	let sample = Sample::new(reading);
-                        	sink.send(sample).await;
+                            reading = [data.temperature, data.humidity, data.pressure];
+                            let sample = Sample::new(reading);
+                            sink.send(sample).await;
                         }
                         Err(e) => match e {
                             BME280Error::ChecksumError => error!("Checksum error"),
@@ -300,11 +311,9 @@ pub mod yxz_bmi160 {
     }
 }*/
 
-
 pub mod bme280 {
     use super::*;
     use bme280_rs as bme280;
-
 
     use bme280::{AsyncBme280, Configuration, Oversampling, SensorMode};
 
@@ -322,47 +331,51 @@ pub mod bme280 {
         hz: u64,
         sensory: u8,
         sink: YtfSender<'static>,
-    	)
-     where
+    ) where
         M: SharedDeviceMutex,
         BUS: embedded_hal_async::i2c::I2c,
-    	{
+    {
         Timer::after(Duration::from_millis(200)).await;
-    	let mut sensor = AsyncBme280::new_with_address(i2c, 0x76, time::Delay);
-     	match sensor.init().with_timeout(Duration::from_secs(5)).await {
-     		Ok(_) => {
-     			println!("BME280 online");
-     		}
-     		Err(_e) => {
-     			println!("BME280 init error by timeout");
-     		}
-     	};
-
-
-
-	   	match sensor.set_sampling_configuration(
-	        Configuration::default()
-	            .with_temperature_oversampling(Oversampling::Oversample1)
-	            .with_pressure_oversampling(Oversampling::Oversample1)
-	            .with_humidity_oversampling(Oversampling::Oversample1)
-	            .with_sensor_mode(SensorMode::Normal)
-	    ).await {
-	        Ok(_) => {
-	            println!("BME280 config OK");
-	           	}
-	        Err(_e) => {
-	            //return(Err(e));
-	            println!("BME280 config error");
-	           	}
-	       	};
-
-        use embassy_time::WithTimeout;
-        match sensor.read_sample().with_timeout(Duration::from_secs(1)).await {
-            Ok(data) => {
-            	println!("BME280 read: OK");
+        let mut sensor = AsyncBme280::new_with_address(i2c, 0x76, time::Delay);
+        match sensor.init().with_timeout(Duration::from_secs(5)).await {
+            Ok(_) => {
+                println!("BME280 online");
             }
             Err(_e) => {
-            	println!("BME280 read: ERR");
+                println!("BME280 init error by timeout");
+            }
+        };
+
+        match sensor
+            .set_sampling_configuration(
+                Configuration::default()
+                    .with_temperature_oversampling(Oversampling::Oversample1)
+                    .with_pressure_oversampling(Oversampling::Oversample1)
+                    .with_humidity_oversampling(Oversampling::Oversample1)
+                    .with_sensor_mode(SensorMode::Normal),
+            )
+            .await
+        {
+            Ok(_) => {
+                println!("BME280 config OK");
+            }
+            Err(_e) => {
+                //return(Err(e));
+                println!("BME280 config error");
+            }
+        };
+
+        use embassy_time::WithTimeout;
+        match sensor
+            .read_sample()
+            .with_timeout(Duration::from_secs(1))
+            .await
+        {
+            Ok(_data) => {
+                println!("BME280 read: OK");
+            }
+            Err(_e) => {
+                println!("BME280 read: ERR");
             }
         };
 
@@ -372,24 +385,26 @@ pub mod bme280 {
         loop {
             ticker.next().await;
             if RECORD.load(ORD) {
-           	match sensor.read_sample().await {
-                        Ok(data) => {
-                        	let reading: Reading = [data.temperature.unwrap_or_default(), data.humidity.unwrap_or_default(), data.pressure.unwrap_or_default()];
-                        	let sample = Sample {
-                            	time: Instant::now(),
-                              	sensory: sensory,
-                                read: reading,
-                         	};
-                        	sink.send(sample.into()).await;
-                        }
-                        Err(e) => println!("BME280 read error"),
+                match sensor.read_sample().await {
+                    Ok(data) => {
+                        let reading: Reading = [
+                            data.temperature.unwrap_or_default(),
+                            data.humidity.unwrap_or_default(),
+                            data.pressure.unwrap_or_default(),
+                        ];
+                        let sample = Sample {
+                            time: Instant::now(),
+                            sensory: sensory,
+                            read: reading,
+                        };
+                        sink.send(sample.into()).await;
                     }
+                    Err(_) => println!("BME280 read error"),
+                }
             };
         }
     }
 }
-
-
 
 pub mod ads1115 {
     use super::*;
@@ -460,8 +475,11 @@ pub mod yco2 {
 
     //#[embassy_executor::task]
 
-    pub async fn long_periodic_task<M, B>(i2c: SharedI2cDevice<'_, M, B>, sensory: u8, sink: ytfk::YtfSender<'_>)
-    -> Result<(), Error<B>>
+    pub async fn long_periodic_task<M, B>(
+        i2c: SharedI2cDevice<'_, M, B>,
+        sensory: u8,
+        sink: ytfk::YtfSender<'_>,
+    ) -> Result<(), Error<B>>
     where
         M: SharedDeviceMutex,
         B: embedded_hal_async::i2c::I2c,
@@ -470,10 +488,10 @@ pub mod yco2 {
         sensor.wake_up().await;
         println!("CO2: Wake up signal sent");
         //sensor.stop_periodic_measurement().await?;
-        let serial = sensor.serial_number().with_timeout(Duration::from_secs(1)).await;
-        println!("CO2: serial number");
+        //let serial = sensor.serial_number().with_timeout(Duration::from_secs(1)).await;
+        //println!("CO2: serial number");
         //sensor.start_periodic_measurement().await?;
-        println!("CO2: Started periodic measurement");
+        //println!("CO2: Started periodic measurement");
 
         //let mut ticker = Ticker::every(Duration::from_secs(5));
         let mut sample: Sample;
@@ -501,8 +519,12 @@ pub mod yco2 {
     }
 
     use embassy_time::WithTimeout;
-    pub async fn task<M, B>(i2c: SharedI2cDevice<'_, M, B>, hz: u64, sensory: u8, sink: ytfk::YtfSender<'_>)
-    -> Result<(), Error<B>>
+    pub async fn task<M, B>(
+        i2c: SharedI2cDevice<'_, M, B>,
+        hz: u64,
+        sensory: u8,
+        sink: ytfk::YtfSender<'_>,
+    ) -> Result<(), Error<B>>
     where
         M: SharedDeviceMutex,
         B: embedded_hal_async::i2c::I2c,
@@ -518,7 +540,11 @@ pub mod yco2 {
             }
         }
         Timer::after(Duration::from_millis(100)).await;
-        match sensor.measure_single_shot().with_timeout(Duration::from_secs(10)).await {
+        match sensor
+            .measure_single_shot()
+            .with_timeout(Duration::from_secs(10))
+            .await
+        {
             Err(_) => println!("CO2: read failed in 10 secs."),
             Ok(_) => {
                 println!("CO2: read OK");
@@ -548,8 +574,6 @@ pub mod yco2 {
             };
         }
     }
-
-
 }
 
 pub mod sen_five {
