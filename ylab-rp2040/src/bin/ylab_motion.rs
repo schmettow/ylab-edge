@@ -14,7 +14,7 @@ use embassy_executor::Executor;
 use mcu::adc::Async;
 #[allow(unused_imports)]
 use mcu::gpio::Pin;
-use mcu::multicore::{spawn_core1, Stack};
+use mcu::multicore::{Stack, spawn_core1};
 
 /// The following code initializes the second stack, plus
 /// two heaps
@@ -24,15 +24,15 @@ static mut CORE1_STACK: Stack<4096> = Stack::new();
 static EXECUTOR0: StaticCell<Executor> = StaticCell::new();
 static EXECUTOR1: StaticCell<Executor> = StaticCell::new();
 
-use ylab_lib as yll;
-use yll::ysns::moi;
-use yll::yuii::btn as ybtn;
-use yll::yuio::led as yled;
-use ylab::task::{moi_task, btn20_task, led_task};
+use ylab::task::{btn20_task, led_task, moi_task};
 use ylab::ybus::SharedI2cDevice;
 use ylab::ysns::adc as yadc;
 use ylab::ytfk::bsu as ybsu;
 use ylab::*;
+use ylab_lib as yll;
+use yll::ysns::moi;
+use yll::yuii::btn as ybtn;
+use yll::yuio::led as yled;
 
 use ylab_lib::{Mutex, StaticCell};
 
@@ -86,24 +86,24 @@ fn init() -> ! {
     spawn_core1(p.CORE1, unsafe { &mut CORE1_STACK }, move || {
         let executor1 = EXECUTOR1.init(Executor::new());
         executor1.run(|spawner| {
-            match spawner .spawn(task::lsm6_multi_task_0(i2c01, 31, 2, 4)) {
-          		Ok(_) => println!("All happy!"),
-           		Err(e) => println!("Lsm6 on I2C0 failed: {}", e),
-           };
+            match spawner.spawn(task::lsm6_multi_task_0(i2c01, 50, 2, 3)) {
+                Ok(_) => println!("All happy!"),
+                Err(e) => println!("Lsm6 on I2C0 failed: {}", e),
+            };
         })
     });
 
     // CORE 0
     let executor0 = EXECUTOR0.init(Executor::new());
     executor0.run(|spawner| {
-    	// MOI task
+        // MOI task
         spawner
             .spawn(moi_task(
                 p.PIN_21.into(),
                 p.PIN_22.into(),
                 p.PIN_8.into(),
                 p.PIN_9.into(),
-                0
+                0,
             ))
             .unwrap();
         // ADC task
@@ -113,7 +113,7 @@ fn init() -> ! {
             .unwrap();
 
         // task for controlling the led
-        use mcu::gpio::{Output, Level};
+        use mcu::gpio::{Level, Output};
         let led = Output::new(p.PIN_25, Level::Low);
         unwrap!(spawner.spawn(led_task(led)));
         // task for listening to button presses.
@@ -126,7 +126,6 @@ fn init() -> ! {
         unwrap!(spawner.spawn(control_task()));
     });
 }
-
 
 #[embassy_executor::task]
 async fn control_task() {
