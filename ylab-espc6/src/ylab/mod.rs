@@ -1,16 +1,17 @@
 #![no_std]
 
+pub use crate::mcu::Async;
+pub use embassy_embedded_hal as ehal;
 pub use esp_hal as mcu;
+pub use esp_println::println;
 pub use mcu::gpio::AnyPin;
 pub use mcu::i2c::master::I2c;
-pub use crate::mcu::Async;
 //pub use mcu::peripherals::Peripheral as Peri;
+pub use defmt::{debug, info};
 pub use ylab_lib as yll;
+pub use yll::ybus::*;
 pub use yll::yuii;
 pub use yll::yuio;
-pub use yll::*;
-pub use yll::ybus::*;
-pub use defmt::{info, debug};
 
 pub mod ysns; // Ylab sensors
 pub mod ytfk;
@@ -25,5 +26,6 @@ type SharedBusMutexType = embassy_sync::blocking_mutex::raw::CriticalSectionRawM
 pub type SharedBusMutex<I> = embassy_sync::mutex::Mutex<SharedBusMutexType, I>;
 pub type SharedI2cBus = SharedBusMutex<I2c<'static, Async>>;
 
-pub type SharedI2c = I2cDevice<'static, SharedBusMutexType, I2c<'static, Async>>;
-//pub type SharedI2c1 = I2cDevice<'static, SharedBusMutexType, I2c<'static, I2C1, mcu::i2c::Async>>;
+//pub type SharedI2c = I2cDevice<'static, SharedBusMutexType, I2c<'static, Async>>;
+pub use mcu::peripherals::I2C1;
+pub type SharedI2c0 = I2cDevice<'static, SharedBusMutexType, I2c<'static, I2C0, mcu::i2c::Async>>;

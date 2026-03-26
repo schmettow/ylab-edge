@@ -12,6 +12,8 @@ pub enum YsenseErr {
     Task,
 }
 
+pub use xca9548a as i2c_hub;
+
 /*pub trait Ysense<M, BUS, const N: usize>
 where 	M: SharedDeviceMutex,
         BUS: embedded_hal_async::i2c::I2c,
@@ -962,17 +964,21 @@ pub mod yxz_lsm6 {
         let mut sensor = Sensor::new(i2c, sensory, hz);
         match sensor.init().await {
             Ok(_) => println!("Lsm6: init OK"),
-            Err(e) => println!("Lsm6: read failed {:?}", e),
+            Err(e) => println!("Lsm6: init failed {:?}", e),
         }
+        let mut ticker = Ticker::every(Duration::from_hz(hz));
         loop {
-            let mut ticker = Ticker::every(Duration::from_hz(hz));
-            sink.send(sensor.sample().await.unwrap().into()).await;
+            match sensor.sample().await {
+                Ok(sample) => {
+                    sink.send(sample.into()).await;
+                }
+                Err(_) => {}
+            }
             ticker.next().await;
         }
     }
 
     // MULTI Task
-
     use xca9548a::{SlaveAddr, Xca9548a};
     pub async fn inner_multi_task<M, B>(
         i2c: SharedI2cDevice<'_, M, B>,
@@ -985,10 +991,8 @@ pub mod yxz_lsm6 {
         M: SharedDeviceMutex,
         B: AsyncI2c,
     {
-        //let i2c_tca = SharedI2cDevice::new(&i2c_bus);
         let tca = Xca9548a::new(i2c, SlaveAddr::default());
         let hub = tca.split();
-
         let sen_0 = Sensor::new(hub.i2c0, sensory, hz);
         let sen_1 = Sensor::new(hub.i2c1, sensory + 1, hz);
         let sen_2 = Sensor::new(hub.i2c2, sensory + 2, hz);
@@ -1004,9 +1008,15 @@ pub mod yxz_lsm6 {
                 continue;
             }
             if let Ok(_) = sens.init().await {
-                println!("Sensor {} active", s);
-                sensor_active[s] = true;
-            };
+                if let Ok(_) = sens.sample().await {
+                    println!("# Sensor {} active", s);
+                    sensor_active[s] = true;
+                } else {
+                    println!("# Sensor {} failed to sample", s);
+                }
+            } else {
+                println!("# Sensor {} failed to initialize", s);
+            }
         }
         loop {
             for (s, sensor) in sensors.as_mut().into_iter().enumerate() {
@@ -1014,7 +1024,6 @@ pub mod yxz_lsm6 {
                     continue;
                 }
                 if let Ok(sam) = sensor.sample().await {
-                    println!("Lsm6_{}: read OK", s);
                     sink.send(sam.into()).await;
                 }
             }
@@ -1106,6 +1115,29 @@ pub mod btn {
                 BTN.signal(Event::Short);
             };
             Timer::after(Duration::from_millis(longpress)).await;
+        }
+    }
+}
+
+pub mod fake {
+    use super::*;
+    const N: usize = 1;
+    pub type Measure = u8;
+    pub type Reading = [Measure; N];
+    pub type Sample = ydata::Sample<Measure, N>;
+
+    #[embassy_executor::task]
+    pub async fn task(sink: YtfSender<'static>) {
+        let mut ticker = Ticker::every(Duration::from_hz(2));
+        loop {
+            ticker.next().await;
+            let reading: Reading = [42];
+            let sample = Sample {
+                sensory: 42,
+                time: Instant::now(),
+                read: reading,
+            };
+            sink.send(sample.into()).await;
         }
     }
 }
