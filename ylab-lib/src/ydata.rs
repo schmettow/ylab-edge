@@ -35,7 +35,7 @@ impl<M: Into<YtfType>, const N: usize> Into<Ytf> for Sample<M, N> {
 
 impl core::fmt::Display for Ytf {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{}, {}", self.time.as_micros(), self.sensory).unwrap();
+        write!(f, "{},{}", self.time.as_micros(), self.sensory).unwrap();
         for r in self.read {
             match r {
                 Some(v) => {
