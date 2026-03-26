@@ -1,5 +1,8 @@
+#[target.riscv32imac-unknown-none-elf]
+#runner = "probe-rs run --chip=esp32c6 --preverify --always-print-stacktrace --no-location --catch-hardfault"
+
 [target.riscv32imac-unknown-none-elf]
-runner = "probe-rs run --chip=esp32c6 --preverify --always-print-stacktrace --no-location --catch-hardfault"
+runner = "espflash flash --monitor" # or "probe-rs run --chip esp32c6"
 
 [env]
 DEFMT_LOG="info"
