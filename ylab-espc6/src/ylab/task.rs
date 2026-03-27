@@ -1,18 +1,17 @@
 use super::*;
-use ylab_lib as yll;
-use yll::ysns::{moi, yxz_lsm6}; //yxz_bmi160,ads1115, yco2};
-//use yll::yuii::btn;
-//use yll::yuio::led;
 use crate::ytfk::bsu::SINK;
-use mcu::gpio::Input; //, Pull, Output};
+use mcu::gpio::{Input, Output};
+use ylab_lib as yll;
+use yll::ysns::{moi, yco2, yxz_lsm6}; //yxz_bmi160,ads1115, yco2};
+//use yll::yuii::btn;
+use yll::yuio::led;
 
-/*#[embassy_executor::task]
-pub async fn led_task(led: Output<'static>){
+#[embassy_executor::task]
+pub async fn led_task(led: Output<'static>) {
     led::task(led).await
 }
 
-
-#[embassy_executor::task]
+/*#[embassy_executor::task]
 pub async fn btn20_task(pin: Peri<'static, PIN_20>) {
     let pin = Input::new(pin, Pull::Up);
     btn::inner_task(pin).await;
@@ -39,11 +38,22 @@ pub async fn lsm6_task(i2c: SharedI2c, hz: u64, id: u8) {
     yxz_lsm6::task(i2c, hz, id, SINK.sender()).await;
 }
 
-/*#[embassy_executor::task]
-pub async fn lsm6_multi_task(i2c: SharedI2c1, hz: u64, id: u8, n: u8) {
+#[embassy_executor::task]
+pub async fn lsm6_multi_task(i2c: SharedI2c, hz: u64, id: u8, n: u8) {
     //println!("# Starting LSM6 task");
     yxz_lsm6::inner_multi_task(i2c, n, hz, id, false, SINK.sender()).await;
-}*/
+}
+
+#[embassy_executor::task]
+pub async fn co2_task(i2c: SharedI2c, id: u8) {
+    //println!("# Starting LSM6 task");
+    match yco2::task(i2c, 1, id, SINK.sender()).await {
+        Ok(()) => {}
+        Err(e) => {
+            println!("co2 task failed to start {:?}", e);
+        }
+    }
+}
 
 #[embassy_executor::task]
 pub async fn fake_task() {
