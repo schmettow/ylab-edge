@@ -1,7 +1,6 @@
 #![no_std]
 
 pub use crate::mcu::Async;
-pub use embassy_embedded_hal as ehal;
 pub use esp_hal as mcu;
 pub use esp_println::println;
 pub use mcu::gpio::AnyPin;
@@ -26,6 +25,7 @@ type SharedBusMutexType = embassy_sync::blocking_mutex::raw::CriticalSectionRawM
 pub type SharedBusMutex<I> = embassy_sync::mutex::Mutex<SharedBusMutexType, I>;
 pub type SharedI2cBus = SharedBusMutex<I2c<'static, Async>>;
 
-//pub type SharedI2c = I2cDevice<'static, SharedBusMutexType, I2c<'static, Async>>;
-pub use mcu::peripherals::I2C1;
-pub type SharedI2c0 = I2cDevice<'static, SharedBusMutexType, I2c<'static, I2C0, mcu::i2c::Async>>;
+pub type SharedI2c = I2cDevice<'static, SharedBusMutexType, I2c<'static, Async>>;
+/*pub use mcu::peripherals::I2C0;
+pub type SharedI2c0<'a> =
+    I2cDevice<'static, SharedBusMutexType, I2c<'static, I2C0<'a>, mcu::i2c::Async>>;*/
