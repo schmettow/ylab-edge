@@ -2,11 +2,11 @@
 edition = "2024"
 name = "ylab-espc6"
 rust-version = "1.88"
-version = "0.1.0"
+version = "0.2.0"
 
-[[bin]]
-name = "ylab-espc6"
-path = "./src/bin/ylab_dg.rs"
+#[[bin]]
+#name = "ylab-espc6"
+#path = "./src/bin/ylab_dg.rs"
 
 [lib]
 name = "ylab"
