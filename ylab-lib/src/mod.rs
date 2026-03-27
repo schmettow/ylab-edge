@@ -20,6 +20,9 @@ pub use static_cell::StaticCell;
 pub use time::{Delay, Duration, Instant, Ticker, Timer};
 pub static ORD: Ordering = Ordering::SeqCst;
 
+type SharedBusMutexType = embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+pub type SharedBusMutex<I> = embassy_sync::mutex::Mutex<SharedBusMutexType, I>;
+
 pub mod ybus;
 pub mod ydata;
 pub mod ysns;
