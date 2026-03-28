@@ -35,7 +35,12 @@ pub async fn lsm6_multi_task(i2c: SharedI2c1, hz: u64, id: u8, n: u8) {
 #[embassy_executor::task]
 pub async fn lsm6_task(i2c: SharedI2c, hz: u64, id: u8) {
     //println!("# Starting LSM6 task");
-    yxz_lsm6::task(i2c, hz, id, SINK.sender()).await;
+    match yxz_lsm6::task(i2c, hz, id, SINK.sender()).await {
+        Ok(()) => {}
+        Err(e) => {
+            println!("# Lsm6 task failed to start {:?}", e);
+        }
+    }
 }
 
 #[embassy_executor::task]
@@ -50,7 +55,7 @@ pub async fn co2_task(i2c: SharedI2c, id: u8) {
     match yco2::task(i2c, 1, id, SINK.sender()).await {
         Ok(()) => {}
         Err(e) => {
-            println!("co2 task failed to start {:?}", e);
+            println!("# Co2 task failed to start {:?}", e);
         }
     }
 }

@@ -4,6 +4,7 @@ pub use crate::ybus::{SharedDeviceMutex, SharedI2cDevice};
 use crate::ytfk::YtfSender;
 pub use defmt::Format;
 pub use defmt::println;
+use embassy_time::WithTimeout;
 
 #[derive(Debug, Clone, Format)]
 pub enum YsenseErr {
@@ -520,7 +521,6 @@ pub mod yco2 {
         }
     }
 
-    use embassy_time::WithTimeout;
     pub async fn task<M, B>(
         i2c: SharedI2cDevice<'_, M, B>,
         hz: u64,
@@ -537,8 +537,8 @@ pub mod yco2 {
             Ok(()) => {
                 println!("CO2: wake up OK");
             }
-            Err(_) => {
-                println!("CO2: wake up failed");
+            Err(e) => {
+                println!("CO2: wake up failed: {:?}", e);
             }
         }
         Timer::after(Duration::from_millis(100)).await;
@@ -899,7 +899,10 @@ pub mod yxz_lsm6 {
         }
 
         pub async fn init(&mut self) -> Result<(), YsenseErr> {
-            self.sensor.setup(Delay).await.unwrap();
+            match self.sensor.setup(Delay).await {
+                Ok(_) => {}
+                Err(_) => return Err(YsenseErr::Init),
+            }
             self.sensor
                 .set_accel_sample_rate(DataRate::Freq1660Hz)
                 .await
@@ -916,16 +919,10 @@ pub mod yxz_lsm6 {
                 .set_gyro_scale(GyroscopeScale::Dps250)
                 .await
                 .unwrap();
-            self.sensor
-                .set_gyro_scale(GyroscopeScale::Dps250)
-                .await
-                .unwrap();
-            println!("LSM all set");
             Ok(())
         }
 
         pub async fn read(&mut self) -> Result<Reading, YsenseErr> {
-            println!("LSM read");
             let accel = self.sensor.accel_norm().await.unwrap();
             let gyro = self.sensor.angular_rate().await.unwrap();
             let reading = [
@@ -957,14 +954,16 @@ pub mod yxz_lsm6 {
         hz: u64,
         sensory: u8,
         sink: ytfk::YtfSender<'_>,
-    ) where
+    ) -> Result<(), Error>
+    where
         M: SharedDeviceMutex,
         B: AsyncI2c,
     {
         let mut sensor = Sensor::new(i2c, sensory, hz);
-        match sensor.init().await {
+        match sensor.init().with_timeout(Duration::from_millis(500)).await {
             Ok(_) => println!("Lsm6: init OK"),
-            Err(e) => println!("Lsm6: init failed {:?}", e),
+            //Err(e) => println!("Lsm6: init failed {:?}", e),
+            Err(_) => return Err(lsm6dsox::Error::NotSupported),
         }
         let mut ticker = Ticker::every(Duration::from_hz(hz));
         loop {
