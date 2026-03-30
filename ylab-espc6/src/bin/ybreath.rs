@@ -72,32 +72,47 @@ async fn main(spawner: Spawner) {
 
     let config = gpio::InputConfig::default().with_pull(gpio::Pull::Up);
     let moi_0 = gpio::Input::new(p.GPIO9, config);
-    let moi_1 = gpio::Input::new(p.GPIO10, config);
-    let moi_2 = gpio::Input::new(p.GPIO11, config);
+    let moi_1 = gpio::Input::new(p.GPIO13, config);
+    let moi_2 = gpio::Input::new(p.GPIO14, config);
     let moi_3 = gpio::Input::new(p.GPIO12, config);
     spawner
         .spawn(ylab::task::moi_task(moi_0, moi_1, moi_2, moi_3))
         .unwrap();
 
     // I2C
-    let i2c = mcu::i2c::master::I2c::new(p.I2C0, mcu::i2c::master::Config::default())
+    let i2c0 = mcu::i2c::master::I2c::new(p.I2C0, mcu::i2c::master::Config::default())
         .unwrap()
-        .with_sda(p.GPIO6)
-        .with_scl(p.GPIO7)
+        .with_sda(p.GPIO10)
+        .with_scl(p.GPIO11)
         .into_async();
 
-    static I2C_BUS: StaticCell<ylab::SharedI2cBus> = ylab::StaticCell::new();
-    let i2c_bus = I2C_BUS.init(Mutex::new(i2c));
-    match spawner.spawn(ylab::task::co2_task(SharedI2cDevice::new(i2c_bus), 3)) {
+    /*use mcu::gpio::lp_io::LowPowerOutputOpenDrain;
+    use mcu::time::Rate;
+    let sda = LowPowerOutputOpenDrain::new(p.GPIO6);
+    let scl = LowPowerOutputOpenDrain::new(p.GPIO7);
+    let lp_i2c = esp_hal::i2c::lp_i2c::LpI2c::new(
+        p.LP_I2C0,
+        scl,
+        sda,
+        Rate::from_khz(100_u32), // Standard mode is safer for SCD41
+    );*/
+
+    static I2C_BUS_0: StaticCell<ylab::SharedI2cBus> = ylab::StaticCell::new();
+    let i2c_bus_0 = I2C_BUS_0.init(Mutex::new(i2c0));
+    match spawner.spawn(ylab::task::co2_task(SharedI2cDevice::new(i2c_bus_0), 3)) {
         Ok(_) => {}
         Err(e) => {
             println!("# Failed to spawn co2 task: {:?}", e);
         }
     }
 
+    //static _I2C_BUS_LP: StaticCell<ylab::SharedI2cBus> = ylab::StaticCell::new();
+    //let _i2c_bus_lp = I2C_BUS_LP.init(Mutex::new(lp_i2c));
+
     // ADC
+    #[allow(unused_variables)]
     let adc_controller = p.ADC1;
-    match spawner.spawn(ylab::ysns::adc::task_gpio0_3(
+    /*match spawner.spawn(ylab::ysns::adc::task_gpio0_3(
         adc_controller,
         p.GPIO0,
         p.GPIO1,
@@ -110,5 +125,5 @@ async fn main(spawner: Spawner) {
         Err(e) => {
             println!("# Failed to spawn adc_task: {:?}", e);
         }
-    }
+    }*/
 }
