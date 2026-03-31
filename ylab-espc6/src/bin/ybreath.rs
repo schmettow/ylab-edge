@@ -106,6 +106,9 @@ async fn main(spawner: Spawner) {
         }
     }
 
+    use pca9548a::{BASE_ADDRESS, Pca9548a};
+    use ylab::I2c;
+    let pca = Pca9548a::<Mutex<_, _>>::new(i2c0, BASE_ADDRESS);
     //static _I2C_BUS_LP: StaticCell<ylab::SharedI2cBus> = ylab::StaticCell::new();
     //let _i2c_bus_lp = I2C_BUS_LP.init(Mutex::new(lp_i2c));
 
