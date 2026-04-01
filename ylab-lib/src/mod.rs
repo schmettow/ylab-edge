@@ -1,5 +1,7 @@
 #![no_std]
 
+pub mod pca9548a;
+
 pub use core::fmt::Write;
 pub use core::sync::atomic::AtomicBool;
 pub use core::sync::atomic::Ordering;
