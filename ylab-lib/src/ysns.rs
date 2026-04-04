@@ -72,7 +72,7 @@ pub mod yirt_max {
     pub static READY: AtomicBool = AtomicBool::new(false);
     pub static RECORD: AtomicBool = AtomicBool::new(true);
 
-    const N: usize = 8;
+    const N: usize = 2;
     pub type Measure = u32;
     pub type Sample = ydata::Sample<Measure, N>;
     pub type Error<BUS> = max3010x::Error<ybus::SharedI2cErr<BUS>>;
@@ -92,19 +92,19 @@ pub mod yirt_max {
         sensor.wake_up().await?;
         println!("Max3 awake");
         //let mut sensor = sensor.into_oximeter().await?;
-        let mut sensor = sensor.into_multi_led().await?;
-        println!("Max3010x in MultiLed mode");
-        sensor.set_pulse_amplitude(Led::All, 15).await?;
+        let mut sensor = sensor.into_oximeter().await?;
+        println!("Max3010x in SpO2 mode");
+        sensor.set_pulse_amplitude(Led::All, 64).await?;
         sensor.set_sampling_rate(rate).await?;
         sensor.set_sample_averaging(SampleAveraging::Sa4).await?;
-        sensor
-            .set_led_time_slots([
-                TimeSlot::Led1,
-                TimeSlot::Led2,
-                TimeSlot::Led2,
-                TimeSlot::Led1,
-            ])
-            .await?;
+        /*sensor
+        .set_led_time_slots([
+            TimeSlot::Led1,
+            TimeSlot::Led2,
+            TimeSlot::Led2,
+            TimeSlot::Led1,
+        ])
+        .await?;*/
         sensor.enable_fifo_rollover().await?;
         println!("Max3010x all set");
         let mut read_buf = [0 as Measure; N];
