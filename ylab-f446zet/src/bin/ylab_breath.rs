@@ -5,7 +5,7 @@ use ylab::*;
 use ylab::mcu;
 use ylab::ysns::adc as yadc;
 use ylab::ytfk::bsu as ybsu;
-use ylab::task::{moi_task, max3010x_task, co2_task};
+use ylab::task::{moi_task, co2_task};
 
 
 #[derive(Debug,  // used as fmt
@@ -53,13 +53,13 @@ async fn main(spawner: Spawner) {
         = ExtiInput::new(p.PD0,  p.EXTI0, ylab::Pull::Down,);
     let moi_4
         = ExtiInput::new(p.PD1, p.EXTI1, ylab::Pull::Down);
-    spawner.spawn(task::moi(moi_0, moi_1, moi_3, moi_4)).unwrap();
+    spawner.spawn(moi_task(moi_0, moi_1, moi_3, moi_4)).unwrap();
 
     //ADC
     let adc1 = adc::Adc::new(p.ADC1);
     spawner.spawn(yadc::adcbank_1(adc1,
                                 (p.PA0, p.PA1, p.PA4, p.PB0, p.PC1, p.PC0, p.PC3, p.PC2),
-                                2, 1)).unwrap();
+                                100, 1)).unwrap();
 
     // I2C bus
     let i2c1 = I2c::new(p.I2C1, p.PB8, p.PB9, Irqs, p.DMA1_CH7, p.DMA1_CH0, Default::default());
@@ -71,7 +71,7 @@ async fn main(spawner: Spawner) {
 
     // Yrt_max
     let i2c12 = SharedI2cDevice::new(i2c_bus_1);
-    spawner.spawn(max3010x_task(i2c12, 7, 3)).unwrap();
+    //spawner.spawn(max3010x_task(i2c12, 7, 3)).unwrap();
 
 }
 
